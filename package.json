@@ -5,7 +5,7 @@
   "main": "allDB.js",
   "scripts": {
     "test": "mocha --reporter mocha-appveyor-reporter",
-    "test-local": "mocha ./tests/database/test-postgres.js --slow 0"
+    "test-local": "mocha ./tests/test.js --slow 0"
   },
   "repository": {
     "type": "git",
