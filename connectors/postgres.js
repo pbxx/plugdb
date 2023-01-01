@@ -50,6 +50,41 @@ module.exports = {
 				callback("PostgreSQL host required")
 			}
 		}
+		createSchema(schemaName) {
+			return new Promise((resolve, reject) => {
+				//CREATE SCHEMA IF NOT EXISTS schema_adrauth
+				var query = `CREATE SCHEMA IF NOT EXISTS ${schemaName}`;
+				console.log(query)
+				dbQuery(this.pool, query)
+				.then((queryRes) => {
+					resolve(queryRes)
+				})
+				.catch((err) => {
+					reject(err)
+				})
+			})
+		}
+		createTable(schemaName, tableName, cols) {
+			return new Promise((resolve, reject) => {
+				//CREATE SCHEMA IF NOT EXISTS schema_adrauth
+				processCols(cols, tableName)
+				.then((valueSet) => {
+					var query = `CREATE TABLE "${schemaName}".${tableName} ( ${valueSet.queryCols} );`;
+					console.log(query)
+					dbQuery(this.pool, query)
+					.then((queryRes) => {
+						resolve(queryRes)
+					})
+					.catch((err) => {
+						reject(err)
+					})
+				})
+				.catch((err) => {
+					reject(err)
+				})
+				
+			})
+		}
 		insert(table, object) {
 			return new Promise((resolve, reject) => {
 				try {
@@ -751,7 +786,83 @@ function processValues(object) {
 	})
 }
 
-
+function processCols(cols, tableName) {
+	return new Promise((resolve, reject) => {
+		/* this processes column settings for creation of tables */
+		/* sample <cols> format:
+			[
+				{name: "id", type: "bigint", allowEmpty: false, autoInc: true, primaryKey: true},
+				{name: "title", type: "text"},
+				{name: "zip", type: "int"},
+			]
+		*/
+		try {
+			var colDefaults = {
+				allowEmpty: true,
+				autoInc: false,
+				primaryKey: false
+			}
+			var outQueryInsert = ""
+			var outConstraints = ""
+	
+			for ( col, i in cols ) {
+				//iterate through each passed column def
+				if (col["name"] && typeof(col["name"]) == "string") {
+					//col name provided
+					if (col["type"] && typeof(col["type"]) == "string") {
+						//col type provided, process column
+						var colOptions = { ...colDefaults, ...col }
+						var queryString = `${col["name"]} ${col["type"]} `
+						if (!col["allowEmpty"]) {
+							//do not allow empty/allow null
+							queryString += "NOT NULL "
+						}
+						if (col["autoInc"]) {
+							//set auto increment
+							queryString += "GENERATED ALWAYS AS IDENTITY "
+						}
+						if (col["primaryKey"]) {
+							//add primary key constraint to end-attached constraints
+							if (outConstraints == "") {
+								//outConstraints is blank, do not add leading comma
+								outConstraints += `CONSTRAINT ${tableName}_pkey PRIMARY KEY ( ${col["name"]} ) `
+							} else {
+								outConstraints += ` , CONSTRAINT ${tableName}_pkey PRIMARY KEY ( ${col["name"]} ) `
+							}
+							
+						}
+	
+	
+						//done processing column, add to outQueryInsert string
+						if (outQueryInsert == "") {
+							//outQueryInsert is blank, do not add leading comma
+							outQueryInsert += queryString
+						} else {
+							outQueryInsert += ` , ${queryString}`
+						}
+	
+					} else {
+						console.log(`column type required, ignoring entry without column type (${i})...`)
+					}
+	
+				} else {
+					console.log(`column name required, ignoring entry without column name (${i})...`)
+				}
+			}
+			
+			if (outConstraints != "") {
+				//outConstraints not blank, append to end of query part
+				outQueryInsert += ` , ${outConstraints}`
+				resolve({queryCols: outQueryInsert})
+			} else {
+				// no need to append any constraints
+				resolve({queryCols: outQueryInsert})
+			}
+		} catch (err) {
+			reject(err)
+		}
+	})
+}
 
 function dbQuery(pool, query, valArray) {
     return new Promise((resolve, reject) => {
