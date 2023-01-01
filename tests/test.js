@@ -15,10 +15,10 @@ var testOptions = {
 describe("Database Connection", () => {
     it("should successfully connect to postgres database with supplied config/creds.json", () => {
         //test connection to postgres database
-        var connect = JSON.parse(fs.readFileSync("config/creds.json"))
-        assert.typeOf( connect, "object" )
+        var config = JSON.parse(fs.readFileSync("config/creds.json"))
+        assert.typeOf( config, "object" )
 
-        db = new AllDB({ mode: 'postgres', connect }, (err, resp) => {
+        db = new AllDB(config, (err, resp) => {
             //assert.isUndefined( err )
             //assert.equal( (err == null), true )
             assert.equal( err, null )
@@ -47,7 +47,7 @@ describe("Maintenance Operations", () => {
     })
 })
 */
-describe("Insert and modify operations", () => {
+describe("Create-Read-Update-Delete (CRUD) operations", () => {
     it("should successfully CREATE a schema", () => {
         //test schema creation
         return db.actions.createSchema({schema: "alldb_test_schema"})

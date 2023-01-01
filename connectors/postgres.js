@@ -1,7 +1,5 @@
 const { Pool, Client } = require('pg')
 
-var utils = require("../utils.js");
-
 var globals = {
 	consoleLogQueries: false,
 }
@@ -15,9 +13,16 @@ module.exports = {
 				//host present
 				if (options.user) {
 					//user present
+					
 					if (options.password) {
 						//password present, all clear for this.pool creation
+						if (options.mode) {
+							//clear the mode setting from the options object, so it doesnt go to the database 
+							delete options.mode
+						}
+
 						try {
+							this.user = options.user
 							var defaultOptions = {
 								database: "postgres",
 								port: 5432,
@@ -49,6 +54,27 @@ module.exports = {
 			} else {
 				callback("PostgreSQL host required")
 			}
+		}
+		createDB(opts) {
+			return new Promise((resolve, reject) => {
+				var defaults = {
+					owner: this.user,
+					encoding: "UTF8",
+					encoding: "UTF8",
+				}
+				var options
+				if (opts) { options = processDBOptions(opts, defaults) } else {options = defaults}
+
+				var query = `CREATE DATABASE ${options.name} WITH ${options.dbOptions}`;
+				log(query)
+				dbQuery(this.pool, query)
+				.then((queryRes) => {
+					resolve(queryRes)
+				})
+				.catch((err) => {
+					reject(err)
+				})
+			})
 		}
 		createSchema(opts) {
 			return new Promise((resolve, reject) => {
@@ -189,7 +215,145 @@ module.exports = {
 				}
 			});
 		}
-		update(values, cases, opts) {
+		selectAll(opts) {
+			return new Promise((resolve, reject) => {
+				try {
+					var defaults = {
+						schema: "public",
+					}
+					var options
+					if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+
+					var fName = "db.selectAll";
+					//object keys will become columns, object values will be written to those columns
+					//make sure <object> is an actual object
+					if (typeof(options.table) == "string") {
+						//no selection cases provided, select all from requested table
+						var query = `SELECT * FROM ${options.schema}.${options.table}`;
+						
+						dbQuery(this.pool, query)
+						.then((queryRes) => {
+							resolve(queryRes)
+						})
+						.catch((err) => {
+							reject(err)
+						})
+
+					} else {
+                        //table name was not string
+						reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`)
+					}
+				} catch (err) {
+                    //general error occurred, in the whole try{}catch block
+					reject(err)
+				}
+			});
+		}
+		selectAllWhere(whereCases, opts) {
+			return new Promise((resolve, reject) => {
+				try {
+					var defaults = {
+						schema: "public",
+					}
+					var options
+					if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+
+					var fName = "db.selectAll";
+					//object keys will become columns, object values will be written to those columns
+					//make sure <object> is an actual object
+					if (typeof(options.table) == "string") {
+						processCases(whereCases, options.opArray)
+                        .then((valueSet) => {
+                            //valueSet is an object that contains:
+                            //valueSet.valArray: the Array that actually contains the data to be filtered
+                            //valueSet.valCases: literal SQL/native query string representing the templated $ values, to be inserted into the query
+							var query = `SELECT * FROM ${options.schema}.${options.table} WHERE ${valueSet.valCases};`;
+							log(query)
+							dbQuery(this.pool, query, valueSet.valArray)
+							.then((queryRes) => {
+								resolve(queryRes)
+							})
+							.catch((err) => {
+								reject(err)
+							})
+                        })
+                        .catch((err) => {
+                            //error running processCases()
+                            //handle error
+                            reject({errText: `[ERR: ${fName}] Error running processCases()`, err})
+                        })
+
+					} else {
+                        //table name was not string
+						reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`)
+					}
+				} catch (err) {
+                    //general error occurred, in the whole try{}catch block
+					reject(err)
+				}
+			});
+		}
+		selectCols(cols, opts) {
+			return new Promise((resolve, reject) => {
+				try {
+					var defaults = {
+						schema: "public",
+						opArray: null,
+					}
+					var options
+					if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+
+					var fName = "db.selectCols";
+					var query = `SELECT ${cols} FROM ${options.schema}.${options.table}`;
+
+					dbQuery(this.pool, query)
+					.then((queryRes) => {
+						resolve(queryRes)
+					})
+					.catch((err) => {
+						reject(err)
+					})
+				} catch (err) {
+					reject(err)
+				}
+			});
+		}
+		selectColsWhere(cols, whereCases, opts) {
+			return new Promise((resolve, reject) => {
+				try {
+					var defaults = {
+						schema: "public",
+						opArray: null,
+					}
+					var options
+					if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+
+					var fName = "db.selectCols";
+					//object keys will become columns, object values will be written to those columns
+					//make sure <object> is an actual object
+					processCases(whereCases, options.opArray)
+					.then((valueSet) => {
+						var query = `SELECT ${cols} FROM ${options.schema}.${options.table} WHERE ${valueSet.valCases};`;
+						log(query)
+						dbQuery(this.pool, query, valueSet.valArray)
+						.then((queryRes) => {
+							resolve(queryRes)
+						})
+						.catch((err) => {
+							reject(err)
+						})
+					})
+					.catch((err) => {
+						//error running processCases()
+						//handle error
+						reject({errText: `[ERR: ${fName}] Error running processCases()`, err})
+					})
+				} catch (err) {
+					reject(err)
+				}
+			});
+		}
+		update(values, whereCases, opts) {
 			return new Promise((resolve, reject) => {
 				try {
 					var defaults = {
@@ -204,8 +368,8 @@ module.exports = {
 					//make sure <object> is an actual object
 					if (typeof(options.table) == "string") {
 						if (typeof(values) == "object" && !Array.isArray(values)) {
-							if (typeof(cases) == "object" && !Array.isArray(cases)) {
-								processCasesWithValues(cases, options.opArray, values)
+							if (typeof(whereCases) == "object" && !Array.isArray(whereCases)) {
+								processCasesWithValues(whereCases, options.opArray, values)
 								.then((valueSet) => {
 									//var query = `SELECT ${cols} FROM ${table} WHERE ${valueSet.valCases};`;
 									var query = `UPDATE ${options.schema}.${options.table} SET ${valueSet.valValues} WHERE ${valueSet.valCases}`
@@ -258,7 +422,7 @@ module.exports = {
 				}
 			});
 		}
-		delete(cases, opts) {
+		delete(whereCases, opts) {
 			return new Promise((resolve, reject) => {
 				try {
 					var defaults = {
@@ -272,9 +436,9 @@ module.exports = {
 
 					//object keys will become columns, object values will be written to those columns
 					//make sure <object> is an actual object
-					if (typeof(cases) == "object" && !Array.isArray(cases)) {
+					if (typeof(whereCases) == "object" && !Array.isArray(whereCases)) {
 						if (typeof(options.table) == "string") {
-							processCases(cases, options.opArray)
+							processCases(whereCases, options.opArray)
                         	.then((valueSet) => {
 								var query = `DELETE FROM ${options.schema}.${options.table} WHERE ${valueSet.valCases};`;
 								log(query)
@@ -296,87 +460,9 @@ module.exports = {
 							reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`)
 						}
 					} else {
-						reject(`[ERR: ${fName}] Second argument must be of type 'object', got '${typeof(cases)}'.`)
+						reject(`[ERR: ${fName}] Second argument must be of type 'object', got '${typeof(whereCases)}'.`)
 					}
 				} catch (err) {
-					reject(err)
-				}
-			});
-		}
-		selectAll(opts) {
-			return new Promise((resolve, reject) => {
-				try {
-					var defaults = {
-						schema: "public",
-					}
-					var options
-					if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-
-					var fName = "db.selectAll";
-					//object keys will become columns, object values will be written to those columns
-					//make sure <object> is an actual object
-					if (typeof(options.table) == "string") {
-						//no selection cases provided, select all from requested table
-						var query = `SELECT * FROM ${options.schema}.${options.table}`;
-						
-						dbQuery(this.pool, query)
-						.then((queryRes) => {
-							resolve(queryRes)
-						})
-						.catch((err) => {
-							reject(err)
-						})
-
-					} else {
-                        //table name was not string
-						reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`)
-					}
-				} catch (err) {
-                    //general error occurred, in the whole try{}catch block
-					reject(err)
-				}
-			});
-		}
-		selectAllWhere(cases, opts) {
-			return new Promise((resolve, reject) => {
-				try {
-					var defaults = {
-						schema: "public",
-					}
-					var options
-					if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-
-					var fName = "db.selectAll";
-					//object keys will become columns, object values will be written to those columns
-					//make sure <object> is an actual object
-					if (typeof(options.table) == "string") {
-						processCases(cases, options.opArray)
-                        .then((valueSet) => {
-                            //valueSet is an object that contains:
-                            //valueSet.valArray: the Array that actually contains the data to be filtered
-                            //valueSet.valCases: literal SQL/native query string representing the templated $ values, to be inserted into the query
-							var query = `SELECT * FROM ${options.schema}.${options.table} WHERE ${valueSet.valCases};`;
-							log(query)
-							dbQuery(this.pool, query, valueSet.valArray)
-							.then((queryRes) => {
-								resolve(queryRes)
-							})
-							.catch((err) => {
-								reject(err)
-							})
-                        })
-                        .catch((err) => {
-                            //error running processCases()
-                            //handle error
-                            reject({errText: `[ERR: ${fName}] Error running processCases()`, err})
-                        })
-
-					} else {
-                        //table name was not string
-						reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`)
-					}
-				} catch (err) {
-                    //general error occurred, in the whole try{}catch block
 					reject(err)
 				}
 			});
@@ -438,66 +524,6 @@ module.exports = {
 					} else {
 						reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(table)}'.`)
 					}
-				} catch (err) {
-					reject(err)
-				}
-			});
-		}
-		selectCols(cols, opts) {
-			return new Promise((resolve, reject) => {
-				try {
-					var defaults = {
-						schema: "public",
-						opArray: null,
-					}
-					var options
-					if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-
-					var fName = "db.selectCols";
-					var query = `SELECT ${cols} FROM ${options.schema}.${options.table}`;
-
-					dbQuery(this.pool, query)
-					.then((queryRes) => {
-						resolve(queryRes)
-					})
-					.catch((err) => {
-						reject(err)
-					})
-				} catch (err) {
-					reject(err)
-				}
-			});
-		}
-		selectColsWhere(cols, cases, opts) {
-			return new Promise((resolve, reject) => {
-				try {
-					var defaults = {
-						schema: "public",
-						opArray: null,
-					}
-					var options
-					if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-
-					var fName = "db.selectCols";
-					//object keys will become columns, object values will be written to those columns
-					//make sure <object> is an actual object
-					processCases(cases, options.opArray)
-					.then((valueSet) => {
-						var query = `SELECT ${cols} FROM ${options.schema}.${options.table} WHERE ${valueSet.valCases};`;
-						log(query)
-						dbQuery(this.pool, query, valueSet.valArray)
-						.then((queryRes) => {
-							resolve(queryRes)
-						})
-						.catch((err) => {
-							reject(err)
-						})
-					})
-					.catch((err) => {
-						//error running processCases()
-						//handle error
-						reject({errText: `[ERR: ${fName}] Error running processCases()`, err})
-					})
 				} catch (err) {
 					reject(err)
 				}
@@ -940,7 +966,15 @@ function processOptions(opts, defaults) {
 	
 }
 
-					
+function processDBCreateOptions(opts, defaults) {
+	var outOpts = ""
+	if (opts.owner) {
+
+	}
+	
+}
+
+	
 
 function dbQuery(pool, query, valArray) {
     return new Promise((resolve, reject) => {
