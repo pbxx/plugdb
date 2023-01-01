@@ -31,7 +31,7 @@ describe("Select Operations", () => {
             
         })
         .catch(err => {
-            console.error(err)
+            throw(err)
         })
     })
     it("should select all items within specific columns in a given table", () => {
@@ -42,7 +42,7 @@ describe("Select Operations", () => {
             assert.isArray( res.rows )
         })
         .catch(err => {
-            console.error(err)
+            throw(err)
         })
     })
     it("should select *specific* items within specific columns in a given table", () => {
@@ -53,7 +53,7 @@ describe("Select Operations", () => {
             assert.isArray( res.rows )
         })
         .catch(err => {
-            console.error(err)
+            throw(err)
         })
     })
 })
@@ -68,46 +68,76 @@ describe("Maintenance Operations", () => {
 
         })
         .catch(err => {
-            console.error(err)
+            throw(err)
         })
     })
 })
 
 describe("Insert and modify operations", () => {
-    it("should successfully INSERT a record into a specified table", () => {
-        //test database insert
-        return db.actions.insert("semantics", {name: "testSem", val: "I work well!"})
+    it("should successfully CREATE a schema", () => {
+        //test schema creation
+        return db.actions.createSchema({schema: "alldb_test_schema"})
         .then((res) => {
             assert.typeOf( res, "object" )
             assert.isArray( res.rows )
             
         })
         .catch(err => {
-            console.error(err)
+            throw(err)
+        })
+    })
+    it("should successfully CREATE a table in the schema", () => {
+        //test table creation
+        var cols = [
+            {name: "id", type: "bigint", allowEmpty: false, autoInc: true, primaryKey: true},
+            {name: "title", type: "text"},
+            {name: "zip", type: "int"},
+        ]
+        return db.actions.createTable({schema: "alldb_test_schema", name: "testTable", cols})
+        .then((res) => {
+
+            assert.typeOf( res, "object" )
+            assert.isArray( res.rows )
+            
+        })
+        .catch(err => {
+            throw(err)
+        })
+    })
+    it("should successfully INSERT a record into the table", () => {
+        //test database insert
+        db.actions.insert({title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testTable"})
+        .then((res) => {
+            assert.typeOf( res, "object" )
+            assert.isArray( res.rows )
+            
+        })
+        .catch(err => {
+            throw(err)
         })
     })
     it("should successfully UPDATE a record in a specified table", () => {
         //test database update
-        return db.actions.update("semantics", {val: "I've been updated!!!"}, {name: "testSem", val: "I work well!"})
+        return db.actions.update({zip: 71346}, {title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             assert.isArray( res.rows )
             
         })
         .catch(err => {
-            console.error(err)
+            throw(err)
         })
     })
     it("should successfully DELETE a record from a specified table", () => {
         //test database insert
-        return db.actions.delete("semantics", {name: "testSem"})
+        return db.actions.delete({title: "testSem"}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             assert.isArray( res.rows )
             
         })
         .catch(err => {
-            console.error(err)
+            throw(err)
         })
     })
 })

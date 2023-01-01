@@ -50,10 +50,21 @@ module.exports = {
 				callback("PostgreSQL host required")
 			}
 		}
-		createSchema(schemaName) {
+		createSchema(opts) {
 			return new Promise((resolve, reject) => {
+				var defaults = {
+					overwrite: false
+				}
+				var options
+				if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+
 				//CREATE SCHEMA IF NOT EXISTS schema_adrauth
-				var query = `CREATE SCHEMA IF NOT EXISTS ${schemaName}`;
+				var query = ``;
+				if (options.overwrite) {
+					query += `CREATE SCHEMA ${options.schema}`;
+				} else {
+					query += `CREATE SCHEMA IF NOT EXISTS ${options.schema}`;
+				}
 				console.log(query)
 				dbQuery(this.pool, query)
 				.then((queryRes) => {
@@ -64,12 +75,17 @@ module.exports = {
 				})
 			})
 		}
-		createTable(schemaName, tableName, cols) {
+		createTable(opts) {
 			return new Promise((resolve, reject) => {
+				var defaults = {
+					schema: "public",
+				}
+				var options
+				if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
 				//CREATE SCHEMA IF NOT EXISTS schema_adrauth
-				processCols(cols, tableName)
+				processCols(options.cols, options.name)
 				.then((valueSet) => {
-					var query = `CREATE TABLE "${schemaName}".${tableName} ( ${valueSet.queryCols} );`;
+					var query = `CREATE TABLE "${options.schema}".${options.name} ( ${valueSet.queryCols} );`;
 					console.log(query)
 					dbQuery(this.pool, query)
 					.then((queryRes) => {
@@ -85,20 +101,27 @@ module.exports = {
 				
 			})
 		}
-		insert(table, object) {
+		insert(dataObject, opts) {
 			return new Promise((resolve, reject) => {
 				try {
+					var defaults = {
+						schema: "public",
+					}
+					var options
+					if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+
 					var fName = "db.insert";
-					//object keys will become columns, object values will be written to those columns
-					//make sure <object> is an actual object
-					if (typeof(object) == "object" && !Array.isArray(object)) {
-						if (typeof(table) == "string") {
-							processValues(object)
+					//dataObject keys will become columns, dataObject values will be written to those columns
+					//make sure <dataObject> is an actual dataObject
+					if (typeof(dataObject) == "object" && !Array.isArray(dataObject)) {
+						if (typeof(options.table) == "string") {
+							processValues(dataObject)
 							.then((valueSet) => {
-								var query = `INSERT INTO ${table}(${valueSet.cols}) VALUES (${valueSet.valDollars});`;
+								var query = `INSERT INTO ${options.schema}.${options.table}(${valueSet.cols}) VALUES (${valueSet.valDollars});`;
 								console.log(query)
 								dbQuery(this.pool, query, valueSet.valArray)
                                 .then((queryRes) => {
+									console.log(query)
                                     resolve(queryRes)
                                 })
                                 .catch((err) => {
@@ -112,27 +135,35 @@ module.exports = {
 							
 							
 						} else {
-							reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(table)}'.`)
+							reject(`[ERR: ${fName}] options.table type 'string', got '${typeof(options.table)}'.`)
 						}
 					} else {
-						reject(`[ERR: ${fName}] Second argument must be of type 'object', got '${typeof(object)}'.`)
+						reject(`[ERR: ${fName}] First argument <dataObject> must be of type 'object', got '${typeof(dataObject)}'.`)
 					}
 				} catch (err) {
 					reject(err)
 				}
 			});
 		}
-		delete(table, cases, opArray) {
+		delete(cases, opts) {
 			return new Promise((resolve, reject) => {
 				try {
+					var defaults = {
+						schema: "public",
+						opArray: null
+					}
+					var options
+					if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+
 					var fName = "db.delete";
+
 					//object keys will become columns, object values will be written to those columns
 					//make sure <object> is an actual object
 					if (typeof(cases) == "object" && !Array.isArray(cases)) {
-						if (typeof(table) == "string") {
-							processCases(cases, opArray)
+						if (typeof(options.table) == "string") {
+							processCases(cases, options.opArray)
                         	.then((valueSet) => {
-								var query = `DELETE FROM ${table} WHERE ${valueSet.valCases};`;
+								var query = `DELETE FROM ${options.schema}.${options.table} WHERE ${valueSet.valCases};`;
 								console.log(query)
 								dbQuery(this.pool, query, valueSet.valArray)
                                 .then((queryRes) => {
@@ -149,7 +180,7 @@ module.exports = {
 							})
 
 						} else {
-							reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(table)}'.`)
+							reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`)
 						}
 					} else {
 						reject(`[ERR: ${fName}] Second argument must be of type 'object', got '${typeof(cases)}'.`)
@@ -159,9 +190,15 @@ module.exports = {
 				}
 			});
 		}
-		selectAll(table, cases, opArray) {
+		selectAll(table, cases, opArray, opts) {
 			return new Promise((resolve, reject) => {
 				try {
+					var defaults = {
+						schema: "public",
+					}
+					var options
+					if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+
 					var fName = "db.selectAll";
 					//object keys will become columns, object values will be written to those columns
 					//make sure <object> is an actual object
@@ -173,7 +210,7 @@ module.exports = {
                             //valueSet.valCases: literal SQL/native query string representing the templated $ values, to be inserted into the query
                             if (typeof(cases) == "object" && !Array.isArray(cases)) {
                                 //selection cases were specified, select all from table where cases match
-                                var query = `SELECT * FROM ${table} WHERE ${valueSet.valCases};`;
+                                var query = `SELECT * FROM ${options.schema}.${table} WHERE ${valueSet.valCases};`;
 								console.log(query)
                                 dbQuery(this.pool, query, valueSet.valArray)
                                 .then((queryRes) => {
@@ -213,14 +250,20 @@ module.exports = {
 				}
 			});
 		}
-		rowCountEstimate(table) {
+		rowCountEstimate(table, opts) {
 			return new Promise((resolve, reject) => {
 				try {
+					var defaults = {
+						schema: "public",
+					}
+					var options
+					if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+
 					var fName = "db.rowCountEstimate";
 					//object keys will become columns, object values will be written to those columns
 					//make sure <object> is an actual object
 					if (typeof(table) == "string") {
-						var query = `SELECT reltuples AS estimate FROM pg_class WHERE relname = '${table}';`;
+						var query = `SELECT reltuples AS estimate FROM pg_class WHERE relname = '${options.schema}.${table}';`;
 						console.log(query)
 						dbQuery(this.pool, query, valueSet.valArray)
 						.then((queryRes) => {
@@ -238,14 +281,20 @@ module.exports = {
 				}
 			});
 		}
-		rowCount(table) {
+		rowCount(table, opts) {
 			return new Promise((resolve, reject) => {
 				try {
+					var defaults = {
+						schema: "public",
+					}
+					var options
+					if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+
 					var fName = "db.rowCount";
 					//object keys will become columns, object values will be written to those columns
 					//make sure <object> is an actual object
 					if (typeof(table) == "string") {
-						var query = `SELECT count(*) FROM ${table};`;
+						var query = `SELECT count(*) FROM ${options.schema}.${table};`;
 						console.log(query)
 						dbQuery(this.pool, query, valueSet.valArray)
 						.then((queryRes) => {
@@ -263,9 +312,15 @@ module.exports = {
 				}
 			});
 		}
-		selectCols(table, cols, cases, opArray) {
+		selectCols(table, cols, cases, opArray, opts) {
 			return new Promise((resolve, reject) => {
 				try {
+					var defaults = {
+						schema: "public",
+					}
+					var options
+					if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+
 					var fName = "db.selectCols";
 					//object keys will become columns, object values will be written to those columns
 					//make sure <object> is an actual object
@@ -274,7 +329,7 @@ module.exports = {
 							if (typeof(cases) == "object" && !Array.isArray(cases)) {
 								processCases(cases, opArray)
 								.then((valueSet) => {
-									var query = `SELECT ${cols} FROM ${table} WHERE ${valueSet.valCases};`;
+									var query = `SELECT ${cols} FROM ${options.schema}.${table} WHERE ${valueSet.valCases};`;
 									console.log(query)
 									dbQuery(this.pool, query, valueSet.valArray)
 									.then((queryRes) => {
@@ -314,19 +369,26 @@ module.exports = {
 				}
 			});
 		}
-		update(table, values, cases, opArray) {
+		update(values, cases, opts) {
 			return new Promise((resolve, reject) => {
 				try {
+					var defaults = {
+						schema: "public",
+						opArray: null
+					}
+					var options
+					if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+
 					var fName = "db.update";
 					//object keys will become columns, object values will be written to those columns
 					//make sure <object> is an actual object
-					if (typeof(table) == "string") {
+					if (typeof(options.table) == "string") {
 						if (typeof(values) == "object" && !Array.isArray(values)) {
 							if (typeof(cases) == "object" && !Array.isArray(cases)) {
-								processCasesWithValues(cases, opArray, values)
+								processCasesWithValues(cases, options.opArray, values)
 								.then((valueSet) => {
 									//var query = `SELECT ${cols} FROM ${table} WHERE ${valueSet.valCases};`;
-									var query = `UPDATE ${table} SET ${valueSet.valValues} WHERE ${valueSet.valCases}`
+									var query = `UPDATE ${options.schema}.${options.table} SET ${valueSet.valValues} WHERE ${valueSet.valCases}`
 									console.log(query)
 									dbQuery(this.pool, query, valueSet.valArray)
 									.then((queryRes) => {
@@ -348,7 +410,7 @@ module.exports = {
 									if (err) {
 										return console.error('Error acquiring client', err.stack)
 									}
-									var query = `UPDATE ${table} SET ${valValues}`
+									var query = `UPDATE ${options.table} SET ${valValues}`
 									if (globals.consoleLog) { console.log(`[INFO ${fName}]`, valArray, valValues)
 									console.log(`[INFO ${fName}]`, query) }
 									client.query(query, valArray, (err, res) => {
@@ -369,16 +431,22 @@ module.exports = {
 							reject(`[ERR: ${fName}] Second argument must be of type 'object', got '${typeof(values)}'.`)
 						}
 					} else {
-						reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(table)}'.`)
+						reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`)
 					}
 				} catch (err) {
 					reject(err)
 				}
 			});
 		}
-		increment(table, values, inc, cases, opArray) {
+		increment(table, values, inc, cases, opArray, opts) {
 			return new Promise((resolve, reject) => {
 				try {
+					var defaults = {
+						schema: "public",
+					}
+					var options
+					if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+
 					var fName = "db.increment";
 					//object keys will become columns, object values will be written to those columns
 					//make sure <object> is an actual object
@@ -389,7 +457,7 @@ module.exports = {
 									processCases(cases, opArray)
 									.then((valueSet) => {
 										//var query = `SELECT ${cols} FROM ${table} WHERE ${valueSet.valCases};`;
-										var query = `UPDATE ${table} SET ${values} = ${values} + ${inc} WHERE ${valueSet.valCases};`
+										var query = `UPDATE ${options.schema}.${table} SET ${values} = ${values} + ${inc} WHERE ${valueSet.valCases};`
 										console.log(query)
 										dbQuery(this.pool, query, valueSet.valArray)
 										.then((queryRes) => {
@@ -441,72 +509,14 @@ module.exports = {
 				}
 			});
 		}
-		logRequest(ip, ipInfo, path) {
-			return new Promise((resolve, reject) => {
-				//console.log(ip, ipInfo, path)
-				//check if ip exists in DB at path
-				this.selectCols("uniquevisitors", "uvid", {ip})
-				.then((resp) => {
-					if (resp.rows.length > 0) {
-						//unique visitor exists, get requestlogs
-							if (resp.rows.length > 0) {
-								//request for user and path exists, update request counts
-								this.insert("requestlogs", {ip, path})
-								.then((resp) => {
-									
-									this.increment("uniquevisitors", "reqs", 1, {ip})
-									.then((resp) => {
-										resolve(resp)
-									})
-									.catch((err) => {
-										reject(err)
-									})
-								})
-								.catch((err) => {
-									reject(err)
-								})
-							} else {
-								//request for user and path does NOT exist, write a new record
-								db.insert("requestlogs", {ip, path})
-								.then((resp) => {
-									resolve(resp)
-								})
-								.catch((err) => {
-									reject(err)
-								})
-							}
-					} else {
-						//unique visitor doesnt exist, make it
-						module.exports.insert("uniquevisitors", {ip, ipInfo: JSON.stringify(ipInfo)})
-						.then((resp) => {
-							module.exports.insert("requestlogs", {ip, path})
-							.then((resp) => {
-								resolve(resp)
-							})
-							.catch((err) => {
-								reject(err)
-							})
-						})
-						.catch((err) => {
-							reject(err)
-						})
-					}
-				})
-				.catch((err) => {
-					reject(err)
-				})
-			})
-		}
 		healPrimKeys(opts) {
 			return new Promise((resolve, reject) => {
 				//this function heals numeric primary key sequences when they error irrationally after things like backup-loads
 				var defaults = {
 					schema: "public",
 				}
-				var options = {
-					...defaults,
-					...opts
-				}
+				var options
+				if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
 
 				// Step 1) Get the primary key of the requested table
 				var query = `SELECT string_agg(a.attname, ', ') AS pk
@@ -804,8 +814,9 @@ function processCols(cols, tableName) {
 			}
 			var outQueryInsert = ""
 			var outConstraints = ""
-	
-			for ( col, i in cols ) {
+
+			let i = 0;
+			for ( var col of cols ) {
 				//iterate through each passed column def
 				if (col["name"] && typeof(col["name"]) == "string") {
 					//col name provided
@@ -848,6 +859,7 @@ function processCols(cols, tableName) {
 				} else {
 					console.log(`column name required, ignoring entry without column name (${i})...`)
 				}
+				i++
 			}
 			
 			if (outConstraints != "") {
@@ -864,41 +876,53 @@ function processCols(cols, tableName) {
 	})
 }
 
+function processOptions(opts, defaults) {
+	return { ...defaults, ...opts }
+	
+}
+
+					
+
 function dbQuery(pool, query, valArray) {
     return new Promise((resolve, reject) => {
         pool.connect((err, client, release) => {
-            if (err) {
-                return console.error('Error acquiring client', err.stack)
-            }
-            if (valArray) {
-                //an array of values was passed, which needs to be sent to the database
-                client.query(query, valArray, (err, res) => {
-                    if (err) {
-                        //err writing to db
-                        release()
-                        reject(err)
-                    } else {
-                        //item written to db
-                        release()
-                        resolve(res)
-                    }
-                    
-                })
-            } else {
-                //no values were passed, this request has no selection 
-                client.query(query, (err, res) => {
-                    if (err) {
-                        //err writing to db
-                        release()
-                        reject(err)
-                    } else {
-                        //item written to db
-                        release()
-                        resolve(res)
-                    }
-                    
-                })
-            }
+			try {
+				if (err) {
+					reject(err)
+				}
+				if (valArray) {
+					//an array of values was passed, which needs to be sent to the database
+					client.query(query, valArray, (err, res) => {
+						if (err) {
+							//err writing to db
+							release()
+							reject(err)
+						} else {
+							//item written to db
+							release()
+							resolve(res)
+						}
+						
+					})
+				} else {
+					//no values were passed, this request has no selection 
+					client.query(query, (err, res) => {
+						if (err) {
+							//err writing to db
+							release()
+							reject(err)
+						} else {
+							//item written to db
+							release()
+							resolve(res)
+						}
+						
+					})
+				}
+				
+			} catch (err) {
+				reject(err)
+			}
             
         })
     })
