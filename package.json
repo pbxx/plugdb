@@ -1,7 +1,7 @@
 {
   "name": "allDB",
-  "version": "1.1.1",
-  "description": "Simple local authentication library for nodejs",
+  "version": "0.1.0",
+  "description": "A package that queries multiple types of databases with the same code",
   "main": "allDB.js",
   "scripts": {
     "test": "mocha --reporter mocha-appveyor-reporter",
@@ -12,14 +12,13 @@
     "url": "git+https://github.com/pbxx/allDB.git"
   },
   "author": "Donavan Lewis",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/pbxx/allDB/issues"
   },
   "homepage": "https://github.com/pbxx/allDB",
   "dependencies": {
     "bcrypt": "^5.0.1",
-    "cookie": "^0.4.1",
     "pg": "^8.7.1",
     "uuid": "^8.3.2"
   },

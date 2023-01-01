@@ -1,6 +1,6 @@
 # What is this? 
 
-A simple, multi-database authentication library for node.js
+A package that queries multiple types of databases with the same code
 
 Documentation coming soon...
 
