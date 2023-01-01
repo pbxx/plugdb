@@ -18,7 +18,6 @@
   },
   "homepage": "https://github.com/pbxx/allDB",
   "dependencies": {
-    "bcrypt": "^5.0.1",
     "pg": "^8.7.1",
     "uuid": "^8.3.2"
   },

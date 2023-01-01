@@ -1,6 +1,4 @@
 const { Pool, Client } = require('pg')
-const { v4: uuidv4 } = require('uuid');
-var bcrypt = require('bcrypt');
 
 var utils = require("../utils.js");
 

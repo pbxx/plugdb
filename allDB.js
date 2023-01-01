@@ -1,6 +1,4 @@
 const { v4: uuidv4 } = require("uuid");
-var cookie = require("cookie");
-var bcrypt = require("bcrypt");
 
 var utils = require("./utils.js");
 
