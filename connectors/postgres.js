@@ -148,7 +148,7 @@ module.exports = {
 										
 										dbQuery(this.pool, query)
 										.then((queryRes) => {
-											resolve(queryRes)
+											resolve(processResponse(queryRes))
 										})
 										.catch((err) => {
 											reject(err)
@@ -187,7 +187,7 @@ module.exports = {
 											log(query)
 											dbQuery(this.pool, query, valueSet.valArray)
 											.then((queryRes) => {
-												resolve(queryRes)
+												resolve(processResponse(queryRes))
 											})
 											.catch((err) => {
 												reject(err)
@@ -224,7 +224,7 @@ module.exports = {
 				
 									dbQuery(this.pool, query)
 									.then((queryRes) => {
-										resolve(queryRes)
+										resolve(processResponse(queryRes))
 									})
 									.catch((err) => {
 										reject(err)
@@ -253,7 +253,7 @@ module.exports = {
 										log(query)
 										dbQuery(this.pool, query, valueSet.valArray)
 										.then((queryRes) => {
-											resolve(queryRes)
+											resolve(processResponse(queryRes))
 										})
 										.catch((err) => {
 											reject(err)
@@ -295,7 +295,7 @@ module.exports = {
 													log(query)
 													dbQuery(this.pool, query, valueSet.valArray)
 													.then((queryRes) => {
-														resolve(queryRes)
+														resolve(processResponse(queryRes))
 													})
 													.catch((err) => {
 														reject(err)
@@ -324,7 +324,7 @@ module.exports = {
 														}
 														//item written to db
 														release()
-														resolve(res)
+														resolve(processResponse(res))
 													})
 												})
 												
@@ -358,7 +358,7 @@ module.exports = {
 									log(query)
 									dbQuery(this.pool, query)
 									.then((queryRes) => {
-										resolve(queryRes)
+										resolve(processResponse(queryRes))
 									})
 									.catch((err) => {
 										reject(err)
@@ -389,7 +389,7 @@ module.exports = {
 										dbQuery(this.pool, query, valueSet.valArray)
 										.then((queryRes) => {
 											log(valueSet.valArray)
-											resolve(queryRes)
+											resolve(processResponse(queryRes))
 										})
 										.catch((err) => {
 											reject(err)
@@ -427,7 +427,7 @@ module.exports = {
 								log(query)
 								dbQuery(this.pool, query)
 								.then((queryRes) => {
-									resolve(queryRes)
+									resolve(processResponse(queryRes))
 								})
 								.catch((err) => {
 									reject(err)
@@ -446,7 +446,7 @@ module.exports = {
 								log(query)
 								dbQuery(this.pool, query)
 								.then((queryRes) => {
-									resolve(queryRes)
+									resolve(processResponse(queryRes))
 								})
 								.catch((err) => {
 									reject(err)
@@ -476,7 +476,7 @@ module.exports = {
 												log(query)
 												dbQuery(this.pool, query, valueSet.valArray)
 												.then((queryRes) => {
-													resolve(queryRes)
+													resolve(processResponse(queryRes))
 												})
 												.catch((err) => {
 													reject(err)
@@ -521,7 +521,7 @@ module.exports = {
 								dbQuery(this.pool, query)
 								.then((queryRes) => {
 									log(queryRes)
-									resolve(queryRes)
+									resolve(processResponse(queryRes))
 								})
 								.catch((err) => {
 									//in db query
@@ -540,7 +540,7 @@ module.exports = {
 								dbQuery(this.pool, query)
 								.then((queryRes) => {
 									log(queryRes)
-									resolve(queryRes)
+									resolve(processResponse(queryRes))
 								})
 								.catch((err) => {
 									//in db query
@@ -551,119 +551,89 @@ module.exports = {
 					}
 
 					this.count = {
-						tables: (opts) => {
-							return new Promise((resolve, reject) => {
-								try {
-									var defaults = {
-										schema: "public",
-									}
-									var options
-									if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-									
-									var fName = "db.rowCountEstimate";
-									//object keys will become columns, object values will be written to those columns
-									//make sure <object> is an actual object
-									var query = ""
-									if (options.schema) {
-										//return all tables in schema
-										query = `SELECT count(*) FROM information_schema.tables WHERE table_schema = '${options.schema}';`
-									} else {
-										//return all tables in ALL schemas
-										query = `select count(*) from information_schema.tables where table_type = 'BASE TABLE';`
-									}
-									log(query)
-									dbQuery(this.pool, query)
-									.then((queryRes) => {
-										resolve(queryRes)
-									})
-									.catch((err) => {
-										reject(err)
-									})
-								} catch (err) {
-									reject(err)
-								}
-							});
-						},
-						schemas: (opts) => {
-							return new Promise((resolve, reject) => {
+						tables: async (opts) => {
+							try {
 								var defaults = {
+									schema: "public",
 								}
 								var options
 								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-								//SELECT schema_name FROM information_schema.schemata;
-								var query = `SELECT count(schema_name) FROM information_schema.schemata;`
-								dbQuery(this.pool, query)
-								.then((queryRes) => {
-									log(queryRes)
-									resolve(queryRes)
-								})
-								.catch((err) => {
-									//in db query
-									reject(err)
-								})
-							})
-						},
-						rowsEstimate: (opts) => {
-							return new Promise((resolve, reject) => {
-								try {
-									var defaults = {
-										schema: "public",
-									}
-									var options
-									if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-				
-									var fName = "db.rowCountEstimate";
-									//object keys will become columns, object values will be written to those columns
-									//make sure <object> is an actual object
-									if (typeof(options.table) == "string") {
-										var query = `SELECT reltuples AS estimate FROM pg_class WHERE relname = '${options.schema}.${options.table}';`;
-										log(query)
-										dbQuery(this.pool, query, valueSet.valArray)
-										.then((queryRes) => {
-											resolve(queryRes)
-										})
-										.catch((err) => {
-											reject(err)
-										})
-										
-									} else {
-										reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`)
-									}
-								} catch (err) {
-									reject(err)
+								//object keys will become columns, object values will be written to those columns
+								//make sure <object> is an actual object
+								var query = ""
+								if (options.schema) {
+									//return all tables in schema
+									query = `SELECT count(*) FROM information_schema.tables WHERE table_schema = '${options.schema}';`
+								} else {
+									//return all tables in ALL schemas
+									query = `select count(*) from information_schema.tables where table_type = 'BASE TABLE';`
 								}
-							});
+
+								var queryRes = await dbQuery(this.pool, query)
+								log(queryRes)
+								return parseFloat(queryRes.rows[0].count)
+							} catch (err) {
+								throw err
+							}
 						},
-						rows: (opts) => {
-							return new Promise((resolve, reject) => {
-								try {
-									var defaults = {
-										schema: "public",
-									}
-									var options
-									if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-				
-									var fName = "db.rowCount";
-									//object keys will become columns, object values will be written to those columns
-									//make sure <object> is an actual object
-									if (typeof(options.table) == "string") {
-										var query = `SELECT count(*) FROM ${options.schema}.${options.table};`;
-										log(query)
-										dbQuery(this.pool, query, valueSet.valArray)
-										.then((queryRes) => {
-											resolve(queryRes)
-										})
-										.catch((err) => {
-											reject(err)
-										})
-										
-									} else {
-										reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`)
-									}
-								} catch (err) {
-									reject(err)
+						schemas: async (opts) => {
+							var defaults = {
+							}
+							var options
+							if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+							//SELECT schema_name FROM information_schema.schemata;
+							var query = `SELECT count(schema_name) FROM information_schema.schemata;`
+							var queryRes = await dbQuery(this.pool, query)
+							log(queryRes)
+							return parseFloat(queryRes.rows[0].count)
+						},
+						rowsEstimate: async (opts) => {
+							try {
+								var defaults = {
+									schema: "public",
 								}
-							});
+								var options
+								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+			
+								var fName = "db.rowCountEstimate";
+								//object keys will become columns, object values will be written to those columns
+								//make sure <object> is an actual object
+								if (typeof(options.table) == "string") {
+									var query = `SELECT reltuples AS estimate FROM pg_class WHERE relname = '${options.schema}.${options.table}';`;
+									log(query)
+									var queryRes = await dbQuery(this.pool, query, valueSet.valArray)
+									return queryRes
+									
+								} else {
+									throw `[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`
+								}
+							} catch (err) {
+								throw err
+							}
+						},
+						rows: async (opts) => {
+							try {
+								var defaults = {
+									schema: "public",
+								}
+								var options
+								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+			
+								var fName = "db.rowCount";
+								//object keys will become columns, object values will be written to those columns
+								//make sure <object> is an actual object
+								if (typeof(options.table) == "string") {
+									var query = `SELECT count(*) FROM ${options.schema}.${options.table};`;
+									log(query)
+									var queryRes = await dbQuery(this.pool, query, valueSet.valArray)
+									return queryRes
+									
+								} else {
+									throw `[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`
+								}
+							} catch (err) {
+								throw err
+							}
 						},
 					}
 
@@ -703,7 +673,8 @@ module.exports = {
 												dbQuery(this.pool, `SELECT setval('${options.schema}."${options.table}_${primKey}_seq"', ${parseInt(maxKey)});`)
 												.then((queryRes) => {
 													//log(queryRes.rows)
-													resolve({ schema: options.schema, table: options.table })
+													//resolve({ schema: options.schema, table: options.table })
+													resolve(processResponse(queryRes))
 												})
 												.catch((err) => {
 													//in db query
@@ -1075,12 +1046,8 @@ function processOptions(opts, defaults) {
 	
 }
 
-function processDBCreateOptions(opts, defaults) {
-	var outOpts = ""
-	if (opts.owner) {
-
-	}
-	
+function processResponse(queryRes) {
+	return {rows: queryRes.rows, rowCount: queryRes.rowCount}
 }
 
 function dbQuery(pool, query, valArray) {
@@ -1126,10 +1093,6 @@ function dbQuery(pool, query, valArray) {
             
         })
     })
-}
-
-function processResponse(queryRes) {
-
 }
 
 function log(text) {

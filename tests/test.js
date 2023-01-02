@@ -41,9 +41,8 @@ describe("Create-Read-Update operations", () => {
     it("Create a schema", () => {
         //test schema creation
         return db.actions.create.schema({schema: "alldb_test_schema"})
-        .then((res) => {
-            assert.typeOf( res, "object" )
-            assert.isArray( res.rows )
+        .then((resultObject) => {
+            
             
         })
         .catch(err => {
@@ -58,17 +57,14 @@ describe("Create-Read-Update operations", () => {
             {name: "zip", type: "int"},
         ]
         return db.actions.create.table({schema: "alldb_test_schema", name: "testTable", cols})
-        .then((res) => {
-
-            assert.typeOf( res, "object" )
-            assert.isArray( res.rows )
+        .then((resultObject) => {
+            
             
         })
         .catch(err => {
             throw(err)
         })
     })
-    
     it("Create a record into the table", () => {
         //test database insert
         return db.actions.create.record({title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testTable"})
@@ -230,10 +226,11 @@ describe("List operations", () => {
     it("should list all tables", () => {
         //test database insert
         return db.actions.list.tables()
-        .then((res) => {
-            log(res.rows)
-            assert.typeOf( res, "object" )
-            assert.isArray( res.rows )
+        .then((resultObject) => {
+            log(resultObject)
+            assert.typeOf( resultObject, "object" )
+            assert.typeOf( resultObject.rowCount, "number" )
+            assert.isArray( resultObject.rows )
             
         })
         .catch(err => {
@@ -243,10 +240,11 @@ describe("List operations", () => {
     it("should list all tables within a schema", () => {
         //test database insert
         return db.actions.list.tables({schema: "alldb_test_schema"})
-        .then((res) => {
-            log(res.rows)
-            assert.typeOf( res, "object" )
-            assert.isArray( res.rows )
+        .then((resultObject) => {
+            log(resultObject)
+            assert.typeOf( resultObject, "object" )
+            assert.typeOf( resultObject.rowCount, "number" )
+            assert.isArray( resultObject.rows )
             
         })
         .catch(err => {
@@ -257,10 +255,11 @@ describe("List operations", () => {
         //test database insert
         //SELECT schema_name FROM information_schema.schemata;
         return db.actions.list.schemas()
-        .then((res) => {
-            assert.typeOf( res, "object" )
-            log(res.rows)
-            assert.isArray( res.rows )
+        .then((resultObject) => {
+            log(resultObject)
+            assert.typeOf( resultObject, "object" )
+            assert.typeOf( resultObject.rowCount, "number" )
+            assert.isArray( resultObject.rows )
             
         })
         .catch(err => {
@@ -273,10 +272,9 @@ describe("Count operations", () => {
     it("should count all tables", () => {
         //test database insert
         return db.actions.count.tables()
-        .then((res) => {
-            log(res.rows)
-            assert.typeOf( res, "object" )
-            assert.isArray( res.rows )
+        .then((count) => {
+            log(count)
+            assert.typeOf( count, "number" )
             
         })
         .catch(err => {
@@ -286,10 +284,9 @@ describe("Count operations", () => {
     it("should count all tables within a schema", () => {
         //test database insert
         return db.actions.count.tables({schema: "alldb_test_schema"})
-        .then((res) => {
-            log(res.rows)
-            assert.typeOf( res, "object" )
-            assert.isArray( res.rows )
+        .then((count) => {
+            log(count)
+            assert.typeOf( count, "number" )
             
         })
         .catch(err => {
@@ -299,10 +296,9 @@ describe("Count operations", () => {
     it("should count all schemas", () => {
         //test database insert
         return db.actions.count.schemas()
-        .then((res) => {
-            log(res.rows)
-            assert.typeOf( res, "object" )
-            assert.isArray( res.rows )
+        .then((count) => {
+            log(count)
+            assert.typeOf( count, "number" )
             
         })
         .catch(err => {
@@ -442,9 +438,9 @@ function deleteOperations() {
     it("Delete a record from a specified table", () => {
         //test DELETE a record
         return db.actions.delete.record({title: "testSem"}, {schema: "alldb_test_schema", table: "testTable"})
-        .then((res) => {
-            assert.typeOf( res, "object" )
-            assert.isArray( res.rows )
+        .then((resultObject) => {
+            assert.typeOf( resultObject, "object" )
+            assert.isArray( resultObject.rows )
             
         })
         .catch(err => {
@@ -454,10 +450,10 @@ function deleteOperations() {
     it("Delete table", () => {
         //test table deletion
         return db.actions.delete.table({schema: "alldb_test_schema", name: "testTable"})
-        .then((res) => {
+        .then((resultObject) => {
 
-            assert.typeOf( res, "object" )
-            assert.isArray( res.rows )
+            assert.typeOf( resultObject, "object" )
+            assert.isArray( resultObject.rows )
             
         })
         .catch(err => {
@@ -467,9 +463,9 @@ function deleteOperations() {
     it("Delete schema", () => {
         //test schema deletion
         return db.actions.delete.schema({schema: "alldb_test_schema"})
-        .then((res) => {
-            assert.typeOf( res, "object" )
-            assert.isArray( res.rows )
+        .then((resultObject) => {
+            assert.typeOf( resultObject, "object" )
+            assert.isArray( resultObject.rows )
             
         })
         .catch(err => {
