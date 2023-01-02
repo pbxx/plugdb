@@ -737,7 +737,25 @@ module.exports = {
 			}
 		}
 		disconnect() {
-
+			/*
+			return new Promise((resolve, reject) => {
+				this.pool.end()
+				.then(() => {
+					//pool has been disconnected
+					resolve()
+				})
+				.catch(err => {
+					reject(err)
+				})
+			})*/
+			this.pool.end()
+			.then(() => {
+				//pool has been disconnected
+				return null
+			})
+			.catch(err => {
+				throw err
+			})
 		}
 	},
 };

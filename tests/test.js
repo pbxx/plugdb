@@ -475,7 +475,21 @@ function deleteOperations() {
             throw(err)
         })
     })
+    
 }
+
+describe("Disconnect on finish", () => {
+    it("disconnect from database server", () => {
+        //test schema deletion
+        try {
+            db = db.disconnect()
+        } catch (err) {
+            throw err
+        }
+    })
+})
+
+
 
 function log(text) {
     if (testOptions.consoleLog) {

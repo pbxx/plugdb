@@ -47,6 +47,7 @@ module.exports = {
     }
     disconnect() {
       //make disconnect happen and destroy class
+      return this.actions.disconnect()
     }
   },
 };
