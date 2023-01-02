@@ -295,6 +295,19 @@ describe("Count operations", () => {
             throw(err)
         })
     })
+    it("should count all schemas", () => {
+        //test database insert
+        return db.actions.count.schemas()
+        .then((res) => {
+            log(res.rows)
+            assert.typeOf( res, "object" )
+            assert.isArray( res.rows )
+            
+        })
+        .catch(err => {
+            throw(err)
+        })
+    })
 })
 
 describe("Correct issues with next primary key numbers", () => {

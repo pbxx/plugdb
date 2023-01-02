@@ -584,6 +584,25 @@ module.exports = {
 								}
 							});
 						},
+						schemas: (opts) => {
+							return new Promise((resolve, reject) => {
+								var defaults = {
+								}
+								var options
+								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+								//SELECT schema_name FROM information_schema.schemata;
+								var query = `SELECT count(schema_name) FROM information_schema.schemata;`
+								dbQuery(this.pool, query)
+								.then((queryRes) => {
+									log(queryRes)
+									resolve(queryRes)
+								})
+								.catch((err) => {
+									//in db query
+									reject(err)
+								})
+							})
+						},
 						rowsEstimate: (opts) => {
 							return new Promise((resolve, reject) => {
 								try {
