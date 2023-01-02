@@ -74,6 +74,7 @@ describe("Create-Read-Update operations", () => {
         return db.actions.create.record({title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
             assert.typeOf( res, "object" )
+            log(res.rowCount)
             assert.isArray( res.rows )
             
         })
@@ -120,7 +121,7 @@ describe("Create-Read-Update operations", () => {
         return db.actions.update.record({zip: 71346}, {title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
             assert.typeOf( res, "object" )
-            log(res.rows)
+            log(res.rowCount)
             assert.isArray( res.rows )
             
         })
@@ -148,7 +149,7 @@ describe("Create-Read-Update operations", () => {
         return db.actions.update.incDecWhere(3, "zip", {id: 1}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
             assert.typeOf( res, "object" )
-            log(res.rows)
+            log(res.rowCount)
             assert.isArray( res.rows )
             
         })
@@ -188,7 +189,7 @@ describe("Create-Read-Update operations", () => {
         return db.actions.update.incDecAll(-16, "zip", {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
             assert.typeOf( res, "object" )
-            log(res.rows)
+            log(res.rowCount)
             assert.isArray( res.rows )
             
         })
