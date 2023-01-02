@@ -34,29 +34,8 @@ module.exports = {
 
 					//create this.pool
 					this.pool = new Pool(options);
-					//and CRUD and utility methods
+					//add CRUD and utility methods
 					this.create = {
-						database: (opts) => {
-							return new Promise((resolve, reject) => {
-								var defaults = {
-									owner: this.user,
-									encoding: "UTF8",
-									encoding: "UTF8",
-								}
-								var options
-								if (opts) { options = processDBOptions(opts, defaults) } else {options = defaults}
-				
-								var query = `CREATE DATABASE ${options.name} WITH ${options.dbOptions}`;
-								log(query)
-								dbQuery(this.pool, query)
-								.then((queryRes) => {
-									resolve(queryRes)
-								})
-								.catch((err) => {
-									reject(err)
-								})
-							})
-						},
 						schema: (opts) => {
 							return new Promise((resolve, reject) => {
 								var defaults = {
@@ -430,9 +409,6 @@ module.exports = {
 					}
 
 					this.delete = {
-						database: () => {
-
-						},
 						schema: (opts) => {
 							return new Promise((resolve, reject) => {
 								var defaults = {
@@ -525,8 +501,90 @@ module.exports = {
 						},
 					}
 
-					this.utility = {
-						rowCountEstimate: (table, opts) => {
+					this.list = {
+						tables: (opts) => {
+							return new Promise((resolve, reject) => {
+								var defaults = {
+									schema: "public"
+								}
+								var options
+								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+								//SELECT * FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';
+								var query = ""
+								if (options.schema) {
+									//return all tables in schema
+									query = `SELECT * FROM pg_catalog.pg_tables WHERE schemaname = '${options.schema}';`
+								} else {
+									//return all tables in ALL schemas
+									query = `SELECT * FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';`
+								}
+								dbQuery(this.pool, query)
+								.then((queryRes) => {
+									log(queryRes)
+									resolve(queryRes)
+								})
+								.catch((err) => {
+									//in db query
+									reject(err)
+								})
+							})
+						},
+						schemas: (opts) => {
+							return new Promise((resolve, reject) => {
+								var defaults = {
+								}
+								var options
+								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+								//SELECT schema_name FROM information_schema.schemata;
+								var query = `SELECT schema_name FROM information_schema.schemata;`
+								dbQuery(this.pool, query)
+								.then((queryRes) => {
+									log(queryRes)
+									resolve(queryRes)
+								})
+								.catch((err) => {
+									//in db query
+									reject(err)
+								})
+							})
+						},
+					}
+
+					this.count = {
+						tables: (opts) => {
+							return new Promise((resolve, reject) => {
+								try {
+									var defaults = {
+										schema: "public",
+									}
+									var options
+									if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+									
+									var fName = "db.rowCountEstimate";
+									//object keys will become columns, object values will be written to those columns
+									//make sure <object> is an actual object
+									var query = ""
+									if (options.schema) {
+										//return all tables in schema
+										query = `SELECT count(*) FROM information_schema.tables WHERE table_schema = '${options.schema}';`
+									} else {
+										//return all tables in ALL schemas
+										query = `select count(*) from information_schema.tables where table_type = 'BASE TABLE';`
+									}
+									log(query)
+									dbQuery(this.pool, query)
+									.then((queryRes) => {
+										resolve(queryRes)
+									})
+									.catch((err) => {
+										reject(err)
+									})
+								} catch (err) {
+									reject(err)
+								}
+							});
+						},
+						rowsEstimate: (opts) => {
 							return new Promise((resolve, reject) => {
 								try {
 									var defaults = {
@@ -538,8 +596,8 @@ module.exports = {
 									var fName = "db.rowCountEstimate";
 									//object keys will become columns, object values will be written to those columns
 									//make sure <object> is an actual object
-									if (typeof(table) == "string") {
-										var query = `SELECT reltuples AS estimate FROM pg_class WHERE relname = '${options.schema}.${table}';`;
+									if (typeof(options.table) == "string") {
+										var query = `SELECT reltuples AS estimate FROM pg_class WHERE relname = '${options.schema}.${options.table}';`;
 										log(query)
 										dbQuery(this.pool, query, valueSet.valArray)
 										.then((queryRes) => {
@@ -550,14 +608,14 @@ module.exports = {
 										})
 										
 									} else {
-										reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(table)}'.`)
+										reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`)
 									}
 								} catch (err) {
 									reject(err)
 								}
 							});
 						},
-						rowCount: (table, opts) => {
+						rows: (opts) => {
 							return new Promise((resolve, reject) => {
 								try {
 									var defaults = {
@@ -569,8 +627,8 @@ module.exports = {
 									var fName = "db.rowCount";
 									//object keys will become columns, object values will be written to those columns
 									//make sure <object> is an actual object
-									if (typeof(table) == "string") {
-										var query = `SELECT count(*) FROM ${options.schema}.${table};`;
+									if (typeof(options.table) == "string") {
+										var query = `SELECT count(*) FROM ${options.schema}.${options.table};`;
 										log(query)
 										dbQuery(this.pool, query, valueSet.valArray)
 										.then((queryRes) => {
@@ -581,67 +639,72 @@ module.exports = {
 										})
 										
 									} else {
-										reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(table)}'.`)
+										reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`)
 									}
 								} catch (err) {
 									reject(err)
 								}
 							});
 						},
-						healPrimKeys: (opts) => {
-							return new Promise((resolve, reject) => {
-								//this function heals numeric primary key sequences when they error irrationally after things like backup-loads
-								var defaults = {
-									schema: "public",
-								}
-								var options
-								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-				
-								// Step 1) Get the primary key of the requested table
-								var query = `SELECT string_agg(a.attname, ', ') AS pk
-												FROM
-													pg_constraint AS c
-													CROSS JOIN LATERAL UNNEST(c.conkey) AS cols(colnum) -- conkey is a list of the columns of the constraint; so we split it into rows so that we can join all column numbers onto their names in pg_attribute
-													INNER JOIN pg_attribute AS a ON a.attrelid = c.conrelid AND cols.colnum = a.attnum
-												WHERE
-													c.contype = 'p' -- p = primary key constraint
-													AND c.conrelid = '${options.schema}.${options.table}'::REGCLASS;`
-								
-								//log(query)
-								dbQuery(this.pool, query)
-								.then((DBprimKey) => {
-									var primKey = DBprimKey.rows[0].pk
-				
-										// Step 2) Check max number in <prim key> column of the table
-										dbQuery(this.pool, `SELECT MAX(${primKey}) FROM ${options.schema}.${options.table};`)
-										.then((queryRes) => {
-											var maxKey = queryRes.rows[0].max
-											// Step 3) The next primkey number should be one higher than the max value,
-											// 	if it is not, set the next key value to the current max number, so the next value will be the next number after the following query increments it
-											
-											dbQuery(this.pool, `SELECT setval('${options.schema}."${options.table}_${primKey}_seq"', ${parseInt(maxKey)});`)
+					}
+
+					this.utils = {
+						primKey: {
+							correctNext: (opts) => {
+								return new Promise((resolve, reject) => {
+									//this function heals numeric primary key sequences when they error irrationally after things like backup-loads
+									var defaults = {
+										schema: "public",
+									}
+									var options
+									if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+					
+									// Step 1) Get the primary key of the requested table
+									var query = `SELECT string_agg(a.attname, ', ') AS pk
+													FROM
+														pg_constraint AS c
+														CROSS JOIN LATERAL UNNEST(c.conkey) AS cols(colnum) -- conkey is a list of the columns of the constraint; so we split it into rows so that we can join all column numbers onto their names in pg_attribute
+														INNER JOIN pg_attribute AS a ON a.attrelid = c.conrelid AND cols.colnum = a.attnum
+													WHERE
+														c.contype = 'p' -- p = primary key constraint
+														AND c.conrelid = '${options.schema}.${options.table}'::REGCLASS;`
+									
+									//log(query)
+									dbQuery(this.pool, query)
+									.then((DBprimKey) => {
+										var primKey = DBprimKey.rows[0].pk
+					
+											// Step 2) Check max number in <prim key> column of the table
+											dbQuery(this.pool, `SELECT MAX(${primKey}) FROM ${options.schema}.${options.table};`)
 											.then((queryRes) => {
-												//log(queryRes.rows)
-												resolve({ schema: options.schema, table: options.table })
+												var maxKey = queryRes.rows[0].max
+												// Step 3) The next primkey number should be one higher than the max value,
+												// 	if it is not, set the next key value to the current max number, so the next value will be the next number after the following query increments it
+												
+												dbQuery(this.pool, `SELECT setval('${options.schema}."${options.table}_${primKey}_seq"', ${parseInt(maxKey)});`)
+												.then((queryRes) => {
+													//log(queryRes.rows)
+													resolve({ schema: options.schema, table: options.table })
+												})
+												.catch((err) => {
+													//in db query
+													reject(err)
+												})
+					
 											})
 											.catch((err) => {
-												//in db query
+												//Error checking max number in <prim key> column of the table
 												reject(err)
 											})
-				
-										})
-										.catch((err) => {
-											//Error checking max number in <prim key> column of the table
-											reject(err)
-										})
-									
+										
+									})
+									.catch((err) => {
+										//Error getting the primary key of the requested table
+										reject(err)
+									})
 								})
-								.catch((err) => {
-									//Error getting the primary key of the requested table
-									reject(err)
-								})
-							})
-						},
+							},
+						}
 					}
 
 					//callback to allDB
@@ -1026,6 +1089,10 @@ function dbQuery(pool, query, valArray) {
             
         })
     })
+}
+
+function processResponse(queryRes) {
+
 }
 
 function log(text) {

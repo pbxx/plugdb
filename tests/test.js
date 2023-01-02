@@ -7,9 +7,9 @@ const fs = require('node:fs');
 var db = null
 
 var testOptions = {
-    deleteOnFinish: true,
-    deleteOnStart: false,
-    consoleLog: false,
+    deleteOnFinish: false,
+    deleteOnStart: true,
+    consoleLog: true,
 }
 
 describe("Database Connection", () => {
@@ -38,7 +38,7 @@ describe("Delete operations", () => {
 })
 
 describe("Create-Read-Update operations", () => {
-    it("should successfully CREATE a schema", () => {
+    it("Create a schema", () => {
         //test schema creation
         return db.actions.create.schema({schema: "alldb_test_schema"})
         .then((res) => {
@@ -50,7 +50,7 @@ describe("Create-Read-Update operations", () => {
             throw(err)
         })
     })
-    it("should successfully CREATE a table in the schema", () => {
+    it("Create a table in the schema", () => {
         //test table creation
         var cols = [
             {name: "id", type: "bigint", allowEmpty: false, autoInc: true, primaryKey: true},
@@ -69,7 +69,7 @@ describe("Create-Read-Update operations", () => {
         })
     })
     
-    it("should successfully INSERT a record into the table", () => {
+    it("Create a record into the table", () => {
         //test database insert
         return db.actions.create.record({title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
@@ -81,7 +81,7 @@ describe("Create-Read-Update operations", () => {
             throw(err)
         })
     })
-    it("should select all items in a given table", () => {
+    it("Read all items in the table", () => {
         //test database select all
         return db.actions.get.all({schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
@@ -93,7 +93,7 @@ describe("Create-Read-Update operations", () => {
             throw(err)
         })
     })
-    it("should select all items within specific columns in a given table", () => {
+    it("Read all items within specific columns in a given table", () => {
         //test database select cols
         return db.actions.get.cols("id, zip", {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
@@ -104,7 +104,7 @@ describe("Create-Read-Update operations", () => {
             throw(err)
         })
     })
-    it("should select *specific* items within specific columns in a given table", () => {
+    it("Read *specific* items within specific columns in a given table", () => {
         //test database select cols
         return db.actions.get.colsWhere("title, zip", {id: 1}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
@@ -115,7 +115,7 @@ describe("Create-Read-Update operations", () => {
             throw(err)
         })
     })
-    it("should successfully UPDATE a record in a specified table", () => {
+    it("Update a record in a specified table", () => {
         //test database update
         return db.actions.update.record({zip: 71346}, {title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
@@ -128,7 +128,7 @@ describe("Create-Read-Update operations", () => {
             throw(err)
         })
     })
-    it("   'zip' value should now be 71346", () => {
+    it("   'zip' value updated to 71346", () => {
         //test database insert
         return db.actions.get.colsWhere("zip", {id: 1}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
@@ -143,7 +143,7 @@ describe("Create-Read-Update operations", () => {
             throw(err)
         })
     })
-    it("should successfully increment a record in a specified table column", () => {
+    it("Increment a record in a specified table column", () => {
         //test database update
         return db.actions.update.incDecWhere(3, "zip", {id: 1}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
@@ -156,7 +156,7 @@ describe("Create-Read-Update operations", () => {
             throw(err)
         })
     })
-    it("   'zip' value should now be 71349", () => {
+    it("   'zip' value incremented to 71349", () => {
         //test database insert
         return db.actions.get.colsWhere("zip", {id: 1}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
@@ -171,7 +171,7 @@ describe("Create-Read-Update operations", () => {
             throw(err)
         })
     })
-    it("add another record to test multi increment/decrement", () => {
+    it("   add another record to test multi increment/decrement", () => {
         //test database insert
         return db.actions.create.record({title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
@@ -183,7 +183,7 @@ describe("Create-Read-Update operations", () => {
             throw(err)
         })
     })
-    it("should successfully decrement ALL records in a specified table column", () => {
+    it("Decrement ALL records in a specified table column", () => {
         //test database update
         return db.actions.update.incDecAll(-16, "zip", {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
@@ -223,11 +223,95 @@ describe("Create-Read-Update operations", () => {
             throw(err)
         })
     })
-    
-    
 })
-describe("Manually Self-heal primary key gaps", () => {
-    it("add 1 of 2 records...", () => {
+
+describe("List operations", () => {
+    it("should list all tables", () => {
+        //test database insert
+        return db.actions.list.tables()
+        .then((res) => {
+            log(res.rows)
+            assert.typeOf( res, "object" )
+            assert.isArray( res.rows )
+            
+        })
+        .catch(err => {
+            throw(err)
+        })
+    })
+    it("should list all tables within a schema", () => {
+        //test database insert
+        return db.actions.list.tables({schema: "alldb_test_schema"})
+        .then((res) => {
+            log(res.rows)
+            assert.typeOf( res, "object" )
+            assert.isArray( res.rows )
+            
+        })
+        .catch(err => {
+            throw(err)
+        })
+    })
+    it("should list all schemas in the selected database", () => {
+        //test database insert
+        //SELECT schema_name FROM information_schema.schemata;
+        return db.actions.list.schemas()
+        .then((res) => {
+            assert.typeOf( res, "object" )
+            log(res.rows)
+            assert.isArray( res.rows )
+            
+        })
+        .catch(err => {
+            throw(err)
+        })
+    })
+})
+
+describe("Count operations", () => {
+    it("should count all tables", () => {
+        //test database insert
+        return db.actions.count.tables()
+        .then((res) => {
+            log(res.rows)
+            assert.typeOf( res, "object" )
+            assert.isArray( res.rows )
+            
+        })
+        .catch(err => {
+            throw(err)
+        })
+    })
+    it("should count all tables within a schema", () => {
+        //test database insert
+        return db.actions.count.tables({schema: "alldb_test_schema"})
+        .then((res) => {
+            log(res.rows)
+            assert.typeOf( res, "object" )
+            assert.isArray( res.rows )
+            
+        })
+        .catch(err => {
+            throw(err)
+        })
+    })
+})
+
+describe("Correct issues with next primary key numbers", () => {
+    it("   add 1 of 2 records...", () => {
+        //test database insert
+        return db.actions.create.record({title: "badRecord", zip: 14228}, {schema: "alldb_test_schema", table: "testTable"})
+        .then((res) => {
+            assert.typeOf( res, "object" )
+            log(res.rows)
+            assert.isArray( res.rows )
+            
+        })
+        .catch(err => {
+            throw(err)
+        })
+    })
+    it("   add 2 of 2 records...", () => {
         //test database insert
         return db.actions.create.record({title: "badRecord", zip: 14228}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
@@ -239,19 +323,7 @@ describe("Manually Self-heal primary key gaps", () => {
             throw(err)
         })
     })
-    it("add 2 of 2 records...", () => {
-        //test database insert
-        return db.actions.create.record({title: "badRecord", zip: 14228}, {schema: "alldb_test_schema", table: "testTable"})
-        .then((res) => {
-            assert.typeOf( res, "object" )
-            assert.isArray( res.rows )
-            
-        })
-        .catch(err => {
-            throw(err)
-        })
-    })
-    it("delete the records to introduce a primary key gap", () => {
+    it("   delete the records to introduce a primary key gap", () => {
         //test DELETE a record
         return db.actions.delete.record({title: "badRecord"}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
@@ -263,7 +335,7 @@ describe("Manually Self-heal primary key gaps", () => {
             throw(err)
         })
     })
-    it("add a record to visualize key gap", () => {
+    it("   add a record to visualize key gap", () => {
         //test database insert
         return db.actions.create.record({title: "fickleRecord", zip: 14228}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
@@ -275,7 +347,7 @@ describe("Manually Self-heal primary key gaps", () => {
             throw(err)
         })
     })
-    it("   'id' value should be 5, indicating key gap problem", () => {
+    it("   'id' value is 5, indicating key gap problem", () => {
         //test database insert
         return db.actions.get.colsWhere("id", {title: "fickleRecord"}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
@@ -290,7 +362,7 @@ describe("Manually Self-heal primary key gaps", () => {
             throw(err)
         })
     })
-    it("delete this record so gap can be manually fixed", () => {
+    it("   delete this record so gap can be manually fixed", () => {
         //test database insert
         return db.actions.delete.record({id: 5}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
@@ -303,9 +375,9 @@ describe("Manually Self-heal primary key gaps", () => {
             throw(err)
         })
     })
-    it("should heal the primary key gap in the table, by setting the next primkey number to the <max> number in the primary key column", () => {
+    it("Heal next primary key in sequence, by setting the next primkey number to the <max> number in the primary key column", () => {
         //test heal primKey sequence
-        return db.actions.utility.healPrimKeys({schema: "alldb_test_schema", table: "testtable"})
+        return db.actions.utils.primKey.correctNext({schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             log(res)
             assert.typeOf( res, "object" )
@@ -315,7 +387,7 @@ describe("Manually Self-heal primary key gaps", () => {
             throw(err)
         })
     })
-    it("add another record to visualize key gap fixed", () => {
+    it("   add another record to visualize key gap fixed", () => {
         //test database insert
         return db.actions.create.record({title: "fickleRecord", zip: 14228}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
@@ -327,7 +399,7 @@ describe("Manually Self-heal primary key gaps", () => {
             throw(err)
         })
     })
-    it("   'id' value should now be 3, indicating key gap has been fixed", () => {
+    it("   'id' value is now 3, indicating key gap has been fixed", () => {
         //test database insert
         return db.actions.get.colsWhere("id", {title: "fickleRecord"}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
@@ -344,6 +416,8 @@ describe("Manually Self-heal primary key gaps", () => {
     })
 })
 
+
+
 describe("Delete operations", () => {
     if (testOptions.deleteOnFinish) {
         deleteOperations()
@@ -351,7 +425,7 @@ describe("Delete operations", () => {
 })
 
 function deleteOperations() {
-    it("should successfully DELETE a record from a specified table", () => {
+    it("Delete a record from a specified table", () => {
         //test DELETE a record
         return db.actions.delete.record({title: "testSem"}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
@@ -363,7 +437,7 @@ function deleteOperations() {
             throw(err)
         })
     })
-    it("should successfully DROP a table in the schema", () => {
+    it("Delete table", () => {
         //test table deletion
         return db.actions.delete.table({schema: "alldb_test_schema", name: "testTable"})
         .then((res) => {
@@ -376,7 +450,7 @@ function deleteOperations() {
             throw(err)
         })
     })
-    it("should successfully DROP a schema", () => {
+    it("Delete schema", () => {
         //test schema deletion
         return db.actions.delete.schema({schema: "alldb_test_schema"})
         .then((res) => {
