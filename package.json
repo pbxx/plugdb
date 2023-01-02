@@ -19,11 +19,11 @@
   "homepage": "https://github.com/pbxx/allDB",
   "dependencies": {
     "pg": "^8.7.1",
+    "simpletype-js": "^2.0.6",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
     "chai": "^4.3.7",
     "mocha": "^10.2.0"
   }
-
 }
