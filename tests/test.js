@@ -7,8 +7,8 @@ const fs = require('node:fs');
 var db = null
 
 var testOptions = {
-    deleteOnFinish: false,
-    deleteOnStart: true,
+    deleteOnFinish: true,
+    deleteOnStart: false,
     consoleLog: false,
 }
 
@@ -120,6 +120,7 @@ describe("Create-Read-Update operations", () => {
         return db.actions.update.record({zip: 71346}, {title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
             assert.typeOf( res, "object" )
+            log(res.rows)
             assert.isArray( res.rows )
             
         })
@@ -127,11 +128,27 @@ describe("Create-Read-Update operations", () => {
             throw(err)
         })
     })
-    it("should successfully increment a record in a specified table", () => {
+    it("   'zip' value should now be 71346", () => {
+        //test database insert
+        return db.actions.get.colsWhere("zip", {id: 1}, {schema: "alldb_test_schema", table: "testTable"})
+        .then((res) => {
+            assert.typeOf( res, "object" )
+            log(res.rows)
+            assert.isArray( res.rows )
+            assert.equal(res.rows[0].zip, 71346)
+            
+            
+        })
+        .catch(err => {
+            throw(err)
+        })
+    })
+    it("should successfully increment a record in a specified table column", () => {
         //test database update
         return db.actions.update.incDecWhere(3, "zip", {id: 1}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
             assert.typeOf( res, "object" )
+            log(res.rows)
             assert.isArray( res.rows )
             
         })
@@ -139,13 +156,68 @@ describe("Create-Read-Update operations", () => {
             throw(err)
         })
     })
-    it("should successfully increment ALL records in a specified table", () => {
-        //test database update
-        return db.actions.update.incDecAll(-16, "zip", {schema: "alldb_test_schema", table: "testTable"})
+    it("   'zip' value should now be 71349", () => {
+        //test database insert
+        return db.actions.get.colsWhere("zip", {id: 1}, {schema: "alldb_test_schema", table: "testTable"})
+        .then((res) => {
+            assert.typeOf( res, "object" )
+            log(res.rows)
+            assert.isArray( res.rows )
+            assert.equal(res.rows[0].zip, 71349)
+            
+            
+        })
+        .catch(err => {
+            throw(err)
+        })
+    })
+    it("add another record to test multi increment/decrement", () => {
+        //test database insert
+        return db.actions.create.record({title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             assert.isArray( res.rows )
             
+        })
+        .catch(err => {
+            throw(err)
+        })
+    })
+    it("should successfully decrement ALL records in a specified table column", () => {
+        //test database update
+        return db.actions.update.incDecAll(-16, "zip", {schema: "alldb_test_schema", table: "testTable"})
+        .then((res) => {
+            assert.typeOf( res, "object" )
+            log(res.rows)
+            assert.isArray( res.rows )
+            
+        })
+        .catch(err => {
+            throw(err)
+        })
+    })
+    it("   'zip' value should now be 71333 for the first record and 91451 for the second record", () => {
+        //check first record
+        return db.actions.get.colsWhere("zip", {id: 1}, {schema: "alldb_test_schema", table: "testTable"})
+        .then((res) => {
+            assert.typeOf( res, "object" )
+            log(res.rows)
+            assert.isArray( res.rows )
+            assert.equal(res.rows[0].zip, 71333)
+
+            //now check second record
+            return db.actions.get.colsWhere("zip", {id: 2}, {schema: "alldb_test_schema", table: "testTable"})
+            .then((res) => {
+                assert.typeOf( res, "object" )
+                log(res.rows)
+                assert.isArray( res.rows )
+                assert.equal(res.rows[0].zip, 91451)
+                
+                
+            })
+            .catch(err => {
+                throw(err)
+            })
         })
         .catch(err => {
             throw(err)
@@ -203,14 +275,14 @@ describe("Manually Self-heal primary key gaps", () => {
             throw(err)
         })
     })
-    it(" - 'id' value should be 4, indicating key gap problem", () => {
+    it("   'id' value should be 5, indicating key gap problem", () => {
         //test database insert
         return db.actions.get.colsWhere("id", {title: "fickleRecord"}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             log(res.rows)
             assert.isArray( res.rows )
-            assert.equal(res.rows[0].id, 4)
+            assert.equal(res.rows[0].id, 5)
             
             
         })
@@ -220,7 +292,7 @@ describe("Manually Self-heal primary key gaps", () => {
     })
     it("delete this record so gap can be manually fixed", () => {
         //test database insert
-        return db.actions.delete.record({id: 4}, {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.delete.record({id: 5}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             assert.isArray( res.rows )
@@ -255,14 +327,14 @@ describe("Manually Self-heal primary key gaps", () => {
             throw(err)
         })
     })
-    it(" - 'id' value should now be 2, indicating key gap has been fixed", () => {
+    it("   'id' value should now be 3, indicating key gap has been fixed", () => {
         //test database insert
         return db.actions.get.colsWhere("id", {title: "fickleRecord"}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             log(res.rows)
             assert.isArray( res.rows )
-            assert.equal(res.rows[0].id, 2)
+            assert.equal(res.rows[0].id, 3)
             
             
         })
