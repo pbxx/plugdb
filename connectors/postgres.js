@@ -13,16 +13,12 @@ module.exports = {
 				//host present
 				if (options.user) {
 					//user present
-					
+					this.user = options.user
 					if (options.password) {
 						//password present, all clear for this.pool creation
-						if (options.mode) {
-							//clear the mode setting from the options object, so it doesnt go to the database 
-							delete options.mode
-						}
+						if (options.mode) { delete options.mode } //clear the mode setting from the options object, so it doesnt go to the database 
 
 						try {
-							this.user = options.user
 							var defaultOptions = {
 								database: "postgres",
 								port: 5432,

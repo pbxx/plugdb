@@ -8,19 +8,9 @@ module.exports = {
   AllDB: class {
     constructor(options, callback) {
       //set default options
-      var defaultOptions = {
-        
-      }
-      
+      var defaultOptions = {}
       //merge defaults with passed options
-      options = {
-        ...defaultOptions,
-        ...options,
-      }
-
-      this.classGlobals = {
-
-      }
+      options = { ...defaultOptions, ...options, }
 
       if (options.mode) {
         //the mode must be set so adrauth knows what type of database to use
@@ -41,9 +31,15 @@ module.exports = {
           //under construction
 
         } else {
-          callback(
-            `mode setting does not match any compatible modes. got '${options.mode}'`
-          );
+          var { DBLink } = require(options.mode);
+          this.actions = new DBLink(options, (err, resp) => {
+            if (err) {
+              callback(err);
+            } else {
+
+              callback(null, resp);
+            }
+          });
         }
       } else {
         callback("mode setting is required to spawn a new AllDB");
