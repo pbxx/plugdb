@@ -114,7 +114,7 @@ describe("Create-Read-Update operations", () => {
     })
     it("Update a record in a specified table", () => {
         //test database update
-        return db.actions.update.record({zip: 71346}, {title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.update.recordWhere({zip: 71346}, {title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testTable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             log(res.rowCount)

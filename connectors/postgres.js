@@ -36,244 +36,166 @@ module.exports = {
 					this.pool = new Pool(options);
 					//add CRUD and utility methods
 					this.create = {
-						schema: (opts) => {
-							return new Promise((resolve, reject) => {
-								var defaults = {
-									overwrite: false
-								}
-								var options
-								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-				
-								//CREATE SCHEMA IF NOT EXISTS schema_adrauth
-								var query = ``;
-								if (options.overwrite) {
-									query += `CREATE SCHEMA ${options.schema}`;
-								} else {
-									query += `CREATE SCHEMA IF NOT EXISTS ${options.schema}`;
-								}
-								log(query)
-								dbQuery(this.pool, query)
-								.then((queryRes) => {
-									resolve(queryRes)
-								})
-								.catch((err) => {
-									reject(err)
-								})
-							})
+						schema: async (opts) => {
+							var defaults = {
+								overwrite: false
+							}
+							var options
+							if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+			
+							//CREATE SCHEMA IF NOT EXISTS schema_adrauth
+							var query = ``;
+							if (options.overwrite) {
+								query += `CREATE SCHEMA ${options.schema}`;
+							} else {
+								query += `CREATE SCHEMA IF NOT EXISTS ${options.schema}`;
+							}
+							log(query)
+							var queryRes = await dbQuery(this.pool, query)
+							return queryRes
 						},
-						table: (opts) => {
-							return new Promise((resolve, reject) => {
+						table: async (opts) => {
+							var defaults = {
+								schema: "public",
+							}
+							var options
+							if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+							//CREATE SCHEMA IF NOT EXISTS schema_adrauth
+							var valueSet = await processCols(options.cols, options.name)
+
+							var query = `CREATE TABLE "${options.schema}".${options.name} ( ${valueSet.queryCols} );`;
+							log(query)
+							var queryRes = await dbQuery(this.pool, query)
+							return queryRes
+						},
+						record: async (dataObject, opts) => {
+							let tcheck = st.checkSync({ dataObject: "object", table: "string", password: "string" }, {dataObject, ...options})
+							if (tcheck.correct) {
+								try {
+									var defaults = {
+										schema: "public",
+									}
+									var options
+									if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+				
+									var fName = "db.insert";
+									//dataObject keys will become columns, dataObject values will be written to those columns
+									//make sure <dataObject> is an actual dataObject
+									
+									var valueSet = await processValues(dataObject)
+									var query = `INSERT INTO ${options.schema}.${options.table}(${valueSet.cols}) VALUES (${valueSet.valDollars});`;
+									log(query)
+									var queryRes = await dbQuery(this.pool, query, valueSet.valArray)
+									return queryRes
+									
+								} catch (err) {
+									throw err
+									
+								}
+							} else {
+								throw tcheck.failed
+							}
+						},
+					}
+
+					this.get = {
+						all: async (opts) => {
+							try {
 								var defaults = {
 									schema: "public",
 								}
 								var options
 								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-								//CREATE SCHEMA IF NOT EXISTS schema_adrauth
-								processCols(options.cols, options.name)
-								.then((valueSet) => {
-									var query = `CREATE TABLE "${options.schema}".${options.name} ( ${valueSet.queryCols} );`;
-									log(query)
-									dbQuery(this.pool, query)
-									.then((queryRes) => {
-										resolve(queryRes)
-									})
-									.catch((err) => {
-										reject(err)
-									})
-								})
-								.catch((err) => {
-									reject(err)
-								})
-								
-							})
-						},
-						record: (dataObject, opts) => {
-							return new Promise((resolve, reject) => {
-								let tcheck = st.checkSync({ dataObject: "object", table: "string", password: "string" }, {dataObject, ...options})
-								if (tcheck.correct) {
-									try {
-										var defaults = {
-											schema: "public",
-										}
-										var options
-										if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-					
-										var fName = "db.insert";
-										//dataObject keys will become columns, dataObject values will be written to those columns
-										//make sure <dataObject> is an actual dataObject
-										
-												processValues(dataObject)
-												.then((valueSet) => {
-													var query = `INSERT INTO ${options.schema}.${options.table}(${valueSet.cols}) VALUES (${valueSet.valDollars});`;
-													log(query)
-													dbQuery(this.pool, query, valueSet.valArray)
-													.then((queryRes) => {
-														resolve(queryRes)
-													})
-													.catch((err) => {
-														reject(err)
-													})
-					
-												})
-												.catch((err) => {
-													reject(err)
-												})
-										
-									} catch (err) {
-										reject(err)
-									}
+			
+								var fName = "db.selectAll";
+								//object keys will become columns, object values will be written to those columns
+								//make sure <object> is an actual object
+								if (typeof(options.table) == "string") {
+									//no selection cases provided, select all from requested table
+									var query = `SELECT * FROM ${options.schema}.${options.table}`;
+									
+									var queryRes = await dbQuery(this.pool, query)
+									return processResponse(queryRes)
+			
 								} else {
-									reject(tcheck.failed)
+									//table name was not string
+									throw `options.table must be of type 'string', got '${typeof(options.table)}'.`
 								}
-							});
-						},
-					}
-
-					this.get = {
-						all: (opts) => {
-							return new Promise((resolve, reject) => {
-								try {
-									var defaults = {
-										schema: "public",
-									}
-									var options
-									if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-				
-									var fName = "db.selectAll";
-									//object keys will become columns, object values will be written to those columns
-									//make sure <object> is an actual object
-									if (typeof(options.table) == "string") {
-										//no selection cases provided, select all from requested table
-										var query = `SELECT * FROM ${options.schema}.${options.table}`;
-										
-										dbQuery(this.pool, query)
-										.then((queryRes) => {
-											resolve(processResponse(queryRes))
-										})
-										.catch((err) => {
-											reject(err)
-										})
-				
-									} else {
-										//table name was not string
-										reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`)
-									}
-								} catch (err) {
-									//general error occurred, in the whole try{}catch block
-									reject(err)
-								}
-							});
+							} catch (err) {
+								//general error occurred, in the whole try{}catch block
+								throw err
+							}
 							
 						},
-						allWhere: (whereCases, opts) => {
-							return new Promise((resolve, reject) => {
-								try {
-									var defaults = {
-										schema: "public",
-									}
-									var options
-									if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-				
-									var fName = "db.selectAll";
-									//object keys will become columns, object values will be written to those columns
-									//make sure <object> is an actual object
-									if (typeof(options.table) == "string") {
-										processCases(whereCases, options.opArray)
-										.then((valueSet) => {
-											//valueSet is an object that contains:
-											//valueSet.valArray: the Array that actually contains the data to be filtered
-											//valueSet.valCases: literal SQL/native query string representing the templated $ values, to be inserted into the query
-											var query = `SELECT * FROM ${options.schema}.${options.table} WHERE ${valueSet.valCases};`;
-											log(query)
-											dbQuery(this.pool, query, valueSet.valArray)
-											.then((queryRes) => {
-												resolve(processResponse(queryRes))
-											})
-											.catch((err) => {
-												reject(err)
-											})
-										})
-										.catch((err) => {
-											//error running processCases()
-											//handle error
-											reject({errText: `[ERR: ${fName}] Error running processCases()`, err})
-										})
-				
-									} else {
-										//table name was not string
-										reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`)
-									}
-								} catch (err) {
-									//general error occurred, in the whole try{}catch block
-									reject(err)
+						allWhere: async (whereCases, opts) => {
+							try {
+								var defaults = {
+									schema: "public",
 								}
-							});
+								var options
+								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+			
+								var fName = "db.selectAll";
+								//object keys will become columns, object values will be written to those columns
+								//make sure <object> is an actual object
+								if (typeof(options.table) == "string") {
+									var valueSet = await processCases(whereCases, options.opArray)
+									//valueSet is an object that contains:
+									//valueSet.valArray: the Array that actually contains the data to be filtered
+									//valueSet.valCases: literal SQL/native query string representing the templated $ values, to be inserted into the query
+									var query = `SELECT * FROM ${options.schema}.${options.table} WHERE ${valueSet.valCases};`;
+									log(query)
+									var queryRes = await dbQuery(this.pool, query, valueSet.valArray)
+									return processResponse(queryRes)
+
+			
+								} else {
+									//table name was not string
+									throw `[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`
+								}
+							} catch (err) {
+								//general error occurred, in the whole try{}catch block
+								throw err
+							}
 						},
-						cols: (cols, opts) => {
-							return new Promise((resolve, reject) => {
-								try {
-									var defaults = {
-										schema: "public",
-										opArray: null,
-									}
-									var options
-									if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-				
-									var fName = "db.selectCols";
-									var query = `SELECT ${cols} FROM ${options.schema}.${options.table}`;
-				
-									dbQuery(this.pool, query)
-									.then((queryRes) => {
-										resolve(processResponse(queryRes))
-									})
-									.catch((err) => {
-										reject(err)
-									})
-								} catch (err) {
-									reject(err)
+						cols: async (cols, opts) => {
+							try {
+								var defaults = {
+									schema: "public",
+									opArray: null,
 								}
-							});
+								var options
+								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+								
+								var query = `SELECT ${cols} FROM ${options.schema}.${options.table}`;
+			
+								var queryRes = await dbQuery(this.pool, query)
+								return processResponse(queryRes)
+
+							} catch (err) {
+								throw err
+							}
 						},
-						colsWhere: (cols, whereCases, opts) => {
-							return new Promise((resolve, reject) => {
-								try {
-									var defaults = {
-										schema: "public",
-										opArray: null,
-									}
-									var options
-									if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-				
-									var fName = "db.selectCols";
-									//object keys will become columns, object values will be written to those columns
-									//make sure <object> is an actual object
-									processCases(whereCases, options.opArray)
-									.then((valueSet) => {
-										var query = `SELECT ${cols} FROM ${options.schema}.${options.table} WHERE ${valueSet.valCases};`;
-										log(query)
-										dbQuery(this.pool, query, valueSet.valArray)
-										.then((queryRes) => {
-											resolve(processResponse(queryRes))
-										})
-										.catch((err) => {
-											reject(err)
-										})
-									})
-									.catch((err) => {
-										//error running processCases()
-										//handle error
-										reject({errText: `[ERR: ${fName}] Error running processCases()`, err})
-									})
-								} catch (err) {
-									reject(err)
-								}
-							});
+						colsWhere: async (cols, whereCases, opts) => {
+							try {
+								var defaults = { schema: "public", opArray: null }
+								var options; if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+								//object keys will become columns, object values will be written to those columns
+								//make sure <object> is an actual object
+								var valueSet = await processCases(whereCases, options.opArray)
+								var query = `SELECT ${cols} FROM ${options.schema}.${options.table} WHERE ${valueSet.valCases};`;
+								log(query)
+								var queryRes = await dbQuery(this.pool, query, valueSet.valArray)
+								return processResponse(queryRes)
+
+							} catch (err) {
+								throw err
+							}
 						}
 					}
 
 					this.update = {
-						record: (values, whereCases, opts) => {
-							return new Promise((resolve, reject) => {
+						recordWhere: async (values, whereCases, opts) => {
 								try {
 									var defaults = {
 										schema: "public",
@@ -288,45 +210,20 @@ module.exports = {
 									if (typeof(options.table) == "string") {
 										if (typeof(values) == "object" && !Array.isArray(values)) {
 											if (typeof(whereCases) == "object" && !Array.isArray(whereCases)) {
-												processCasesWithValues(whereCases, options.opArray, values)
-												.then((valueSet) => {
-													//var query = `SELECT ${cols} FROM ${table} WHERE ${valueSet.valCases};`;
-													var query = `UPDATE ${options.schema}.${options.table} SET ${valueSet.valValues} WHERE ${valueSet.valCases}`
-													log(query)
-													dbQuery(this.pool, query, valueSet.valArray)
-													.then((queryRes) => {
-														resolve(processResponse(queryRes))
-													})
-													.catch((err) => {
-														reject(err)
-													})
-												})
-												.catch((err) => {
-													//error running processCases()
-													//handle error
-													reject({errText: `[ERR: ${fName}] Error running processCases()`, err})
-												})
-											
-												
+												var valueSet = await processCasesWithValues(whereCases, options.opArray, values)
+												//var query = `SELECT ${cols} FROM ${table} WHERE ${valueSet.valCases};`;
+												var query = `UPDATE ${options.schema}.${options.table} SET ${valueSet.valValues} WHERE ${valueSet.valCases}`
+												log(query)
+												var queryRes = await dbQuery(this.pool, query, valueSet.valArray)
+												return processResponse(queryRes)
+
 											} else {
-												this.pool.connect((err, client, release) => {
-													if (err) {
-														return console.error('Error acquiring client', err.stack)
-													}
-													var query = `UPDATE ${options.table} SET ${valValues}`
-													if (globals.consoleLogQueries) { log(`[INFO ${fName}]`, valArray, valValues)
-													log(`[INFO ${fName}]`, query) }
-													client.query(query, valArray, (err, res) => {
-														if (err) {
-															//err writing to db
-															release()
-															reject(err)
-														}
-														//item written to db
-														release()
-														resolve(processResponse(res))
-													})
-												})
+												var valueSet = await processCasesWithValues(whereCases, options.opArray, values)
+												//var query = `SELECT ${cols} FROM ${table} WHERE ${valueSet.valCases};`;
+												var query = `UPDATE ${options.schema}.${options.table} SET ${valueSet.valValues}`
+												log(query)
+												var queryRes = await dbQuery(this.pool, query, valueSet.valArray)
+												return processResponse(queryRes)
 												
 												
 											}
@@ -339,10 +236,27 @@ module.exports = {
 								} catch (err) {
 									reject(err)
 								}
-							});
 						},
-						incDecAll: (inc, column, opts) => {
-							return new Promise((resolve, reject) => {
+						incDecAll: async (inc, column, opts) => {
+							try {
+								var defaults = {
+									schema: "public",
+									opArray: null,
+								}
+								var options
+								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+								//object keys will become columns, object values will be written to those columns
+								//make sure <object> is an actual object
+								var query = `UPDATE ${options.schema}.${options.table} SET ${column} = ${column} + ${inc};`
+								log(query)
+								var queryRes = await dbQuery(this.pool, query)
+								return processResponse(queryRes)
+									
+							} catch (err) {
+								throw err
+							}
+						},
+						incDecWhere: async (inc, column, cases, opts) => {
 								try {
 									var defaults = {
 										schema: "public",
@@ -354,199 +268,105 @@ module.exports = {
 									var fName = "db.increment";
 									//object keys will become columns, object values will be written to those columns
 									//make sure <object> is an actual object
-									var query = `UPDATE ${options.schema}.${options.table} SET ${column} = ${column} + ${inc};`
+									var valueSet = await processCases(cases, options.opArray)
+									var query = `UPDATE ${options.schema}.${options.table} SET ${column} = ${column} + ${inc} WHERE ${valueSet.valCases};`
 									log(query)
-									dbQuery(this.pool, query)
-									.then((queryRes) => {
-										resolve(processResponse(queryRes))
-									})
-									.catch((err) => {
-										reject(err)
-									})
+									var queryRes = await dbQuery(this.pool, query, valueSet.valArray)
+									return processResponse(queryRes)
 										
 								} catch (err) {
-									reject(err)
+									throw err
 								}
-							});
-						},
-						incDecWhere: (inc, column, cases, opts) => {
-							return new Promise((resolve, reject) => {
-								try {
-									var defaults = {
-										schema: "public",
-										opArray: null,
-									}
-									var options
-									if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-				
-									var fName = "db.increment";
-									//object keys will become columns, object values will be written to those columns
-									//make sure <object> is an actual object
-									processCases(cases, options.opArray)
-									.then((valueSet) => {
-										var query = `UPDATE ${options.schema}.${options.table} SET ${column} = ${column} + ${inc} WHERE ${valueSet.valCases};`
-										log(query)
-										dbQuery(this.pool, query, valueSet.valArray)
-										.then((queryRes) => {
-											log(valueSet.valArray)
-											resolve(processResponse(queryRes))
-										})
-										.catch((err) => {
-											reject(err)
-										})
-									})
-									.catch((err) => {
-										//error running processCasesWithValues()
-										//handle error
-										reject({errText: `[ERR: ${fName}] Error running processCasesWithValues()`, err})
-									})
-										
-								} catch (err) {
-									reject(err)
-								}
-							});
 						},
 					}
 
 					this.delete = {
-						schema: (opts) => {
-							return new Promise((resolve, reject) => {
-								var defaults = {
-									overwrite: false
-								}
-								var options
-								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-				
-								//CREATE SCHEMA IF NOT EXISTS schema_adrauth
-								var query = ``;
-								if (options.overwrite) {
-									query += `DROP SCHEMA ${options.schema}`;
-								} else {
-									query += `DROP SCHEMA IF EXISTS ${options.schema}`;
-								}
-								log(query)
-								dbQuery(this.pool, query)
-								.then((queryRes) => {
-									resolve(processResponse(queryRes))
-								})
-								.catch((err) => {
-									reject(err)
-								})
-							})
+						schema: async (opts) => {
+							var defaults = { overwrite: false }
+							var options; if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+
+							var query = ``;
+							if (options.overwrite) {
+								query += `DROP SCHEMA ${options.schema}`;
+							} else {
+								query += `DROP SCHEMA IF EXISTS ${options.schema}`;
+							}
+							log(query)
+							var queryRes = await dbQuery(this.pool, query)
+							return processResponse(queryRes)
 						},
-						table: (opts) => {
-							return new Promise((resolve, reject) => {
+						table: async (opts) => {
+							var defaults = {
+								schema: "public",
+							}
+							var options
+							if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+							//CREATE SCHEMA IF NOT EXISTS schema_adrauth
+							var query = `DROP TABLE "${options.schema}".${options.name};`;
+							log(query)
+							var queryRes = await dbQuery(this.pool, query)
+							return processResponse(queryRes)
+						},
+						record: async (whereCases, opts) => {
+							try {
 								var defaults = {
 									schema: "public",
+									opArray: null
 								}
 								var options
 								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-								//CREATE SCHEMA IF NOT EXISTS schema_adrauth
-								var query = `DROP TABLE "${options.schema}".${options.name};`;
-								log(query)
-								dbQuery(this.pool, query)
-								.then((queryRes) => {
-									resolve(processResponse(queryRes))
-								})
-								.catch((err) => {
-									reject(err)
-								})
-								
-							})
-						},
-						record: (whereCases, opts) => {
-							return new Promise((resolve, reject) => {
-								try {
-									var defaults = {
-										schema: "public",
-										opArray: null
-									}
-									var options
-									if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-				
-									var fName = "db.delete";
-				
-									//object keys will become columns, object values will be written to those columns
-									//make sure <object> is an actual object
-									if (typeof(whereCases) == "object" && !Array.isArray(whereCases)) {
-										if (typeof(options.table) == "string") {
-											processCases(whereCases, options.opArray)
-											.then((valueSet) => {
-												var query = `DELETE FROM ${options.schema}.${options.table} WHERE ${valueSet.valCases};`;
-												log(query)
-												dbQuery(this.pool, query, valueSet.valArray)
-												.then((queryRes) => {
-													resolve(processResponse(queryRes))
-												})
-												.catch((err) => {
-													reject(err)
-												})
-											})
-											.catch((err) => {
-												//error running processCases()
-												//handle error
-												reject({errText: `[ERR: ${fName}] Error running processCases()`, err})
-											})
-				
-										} else {
-											reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`)
-										}
+								//object keys will become columns, object values will be written to those columns
+								//make sure <object> is an actual object
+								if (typeof(whereCases) == "object" && !Array.isArray(whereCases)) {
+									if (typeof(options.table) == "string") {
+										var valueSet = await processCases(whereCases, options.opArray)
+										var query = `DELETE FROM ${options.schema}.${options.table} WHERE ${valueSet.valCases};`;
+										log(query)
+										var queryRes = await dbQuery(this.pool, query, valueSet.valArray)
+										return processResponse(queryRes)
+			
 									} else {
-										reject(`[ERR: ${fName}] Second argument must be of type 'object', got '${typeof(whereCases)}'.`)
+										reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`)
 									}
-								} catch (err) {
-									reject(err)
+								} else {
+									reject(`[ERR: ${fName}] Second argument must be of type 'object', got '${typeof(whereCases)}'.`)
 								}
-							});
+							} catch (err) {
+								reject(err)
+							}
 						},
 					}
 
 					this.list = {
-						tables: (opts) => {
-							return new Promise((resolve, reject) => {
-								var defaults = {
-									schema: "public"
-								}
-								var options
-								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-								//SELECT * FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';
-								var query = ""
-								if (options.schema) {
-									//return all tables in schema
-									query = `SELECT * FROM pg_catalog.pg_tables WHERE schemaname = '${options.schema}';`
-								} else {
-									//return all tables in ALL schemas
-									query = `SELECT * FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';`
-								}
-								dbQuery(this.pool, query)
-								.then((queryRes) => {
-									log(queryRes)
-									resolve(processResponse(queryRes))
-								})
-								.catch((err) => {
-									//in db query
-									reject(err)
-								})
-							})
+						tables: async (opts) => {
+							var defaults = {
+								schema: "public"
+							}
+							var options
+							if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+							//SELECT * FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';
+							var query = ""
+							if (options.schema) {
+								//return all tables in schema
+								query = `SELECT * FROM pg_catalog.pg_tables WHERE schemaname = '${options.schema}';`
+							} else {
+								//return all tables in ALL schemas
+								query = `SELECT * FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';`
+							}
+							var queryRes = await dbQuery(this.pool, query)
+							log(queryRes)
+							return processResponse(queryRes)
 						},
-						schemas: (opts) => {
-							return new Promise((resolve, reject) => {
-								var defaults = {
-								}
-								var options
-								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-								//SELECT schema_name FROM information_schema.schemata;
-								var query = `SELECT schema_name FROM information_schema.schemata;`
-								dbQuery(this.pool, query)
-								.then((queryRes) => {
-									log(queryRes)
-									resolve(processResponse(queryRes))
-								})
-								.catch((err) => {
-									//in db query
-									reject(err)
-								})
-							})
+						schemas: async (opts) => {
+							var defaults = {
+							}
+							var options
+							if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+							//SELECT schema_name FROM information_schema.schemata;
+							var query = `SELECT schema_name FROM information_schema.schemata;`
+							var queryRes = await dbQuery(this.pool, query)
+							log(queryRes)
+							return processResponse(queryRes)
 						},
 					}
 
@@ -639,15 +459,15 @@ module.exports = {
 
 					this.utils = {
 						primKey: {
-							correctNext: (opts) => {
-								return new Promise((resolve, reject) => {
+							correctNext: async (opts) => {
+								try {
 									//this function heals numeric primary key sequences when they error irrationally after things like backup-loads
 									var defaults = {
 										schema: "public",
 									}
 									var options
 									if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-					
+
 									// Step 1) Get the primary key of the requested table
 									var query = `SELECT string_agg(a.attname, ', ') AS pk
 													FROM
@@ -657,42 +477,20 @@ module.exports = {
 													WHERE
 														c.contype = 'p' -- p = primary key constraint
 														AND c.conrelid = '${options.schema}.${options.table}'::REGCLASS;`
-									
+
 									//log(query)
-									dbQuery(this.pool, query)
-									.then((DBprimKey) => {
-										var primKey = DBprimKey.rows[0].pk
-					
-											// Step 2) Check max number in <prim key> column of the table
-											dbQuery(this.pool, `SELECT MAX(${primKey}) FROM ${options.schema}.${options.table};`)
-											.then((queryRes) => {
-												var maxKey = queryRes.rows[0].max
-												// Step 3) The next primkey number should be one higher than the max value,
-												// 	if it is not, set the next key value to the current max number, so the next value will be the next number after the following query increments it
-												
-												dbQuery(this.pool, `SELECT setval('${options.schema}."${options.table}_${primKey}_seq"', ${parseInt(maxKey)});`)
-												.then((queryRes) => {
-													//log(queryRes.rows)
-													//resolve({ schema: options.schema, table: options.table })
-													resolve(processResponse(queryRes))
-												})
-												.catch((err) => {
-													//in db query
-													reject(err)
-												})
-					
-											})
-											.catch((err) => {
-												//Error checking max number in <prim key> column of the table
-												reject(err)
-											})
-										
-									})
-									.catch((err) => {
-										//Error getting the primary key of the requested table
-										reject(err)
-									})
-								})
+									var DBprimKey = await dbQuery(this.pool, query)
+									var primKey = DBprimKey.rows[0].pk
+									// Step 2) Check max number in <prim key> column of the table
+									var maxKey = (await dbQuery(this.pool, `SELECT MAX(${primKey}) FROM ${options.schema}.${options.table};`)).rows[0].max
+									// Step 3) The next primkey number should be one higher than the max value,
+									// 	if it is not, set the next key value to the current max number, so the next value will be the next number after the following query increments it
+									var queryRes = await dbQuery(this.pool, `SELECT setval('${options.schema}."${options.table}_${primKey}_seq"', ${parseInt(maxKey)});`)
+									return processResponse(queryRes)
+								} catch (err) {
+									throw err
+								}
+								
 							},
 						}
 					}
