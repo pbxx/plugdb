@@ -55,11 +55,9 @@ module.exports = {
 							return queryRes
 						},
 						table: async (opts) => {
-							var defaults = {
+							var options = processOptions({
 								schema: "public",
-							}
-							var options
-							if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+							}, opts)
 							//CREATE SCHEMA IF NOT EXISTS schema_adrauth
 							var valueSet = await processCols(options.cols, options.name)
 
@@ -72,13 +70,9 @@ module.exports = {
 							let tcheck = st.checkSync({ dataObject: "object", table: "string", password: "string" }, {dataObject, ...options})
 							if (tcheck.correct) {
 								try {
-									var defaults = {
+									var options = processOptions({
 										schema: "public",
-									}
-									var options
-									if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-				
-									var fName = "db.insert";
+									}, opts)
 									//dataObject keys will become columns, dataObject values will be written to those columns
 									//make sure <dataObject> is an actual dataObject
 									
@@ -101,13 +95,9 @@ module.exports = {
 					this.get = {
 						all: async (opts) => {
 							try {
-								var defaults = {
+								var options = processOptions({
 									schema: "public",
-								}
-								var options
-								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-			
-								var fName = "db.selectAll";
+								}, opts)
 								//object keys will become columns, object values will be written to those columns
 								//make sure <object> is an actual object
 								if (typeof(options.table) == "string") {
@@ -129,13 +119,9 @@ module.exports = {
 						},
 						allWhere: async (whereCases, opts) => {
 							try {
-								var defaults = {
+								var options = processOptions({
 									schema: "public",
-								}
-								var options
-								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-			
-								var fName = "db.selectAll";
+								}, opts)
 								//object keys will become columns, object values will be written to those columns
 								//make sure <object> is an actual object
 								if (typeof(options.table) == "string") {
@@ -151,7 +137,7 @@ module.exports = {
 			
 								} else {
 									//table name was not string
-									throw `[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`
+									throw `options.table must be of type 'string', got '${typeof(options.table)}'.`
 								}
 							} catch (err) {
 								//general error occurred, in the whole try{}catch block
@@ -160,12 +146,10 @@ module.exports = {
 						},
 						cols: async (cols, opts) => {
 							try {
-								var defaults = {
+								var options = processOptions({
 									schema: "public",
 									opArray: null,
-								}
-								var options
-								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+								}, opts)
 								
 								var query = `SELECT ${cols} FROM ${options.schema}.${options.table}`;
 			
@@ -178,8 +162,10 @@ module.exports = {
 						},
 						colsWhere: async (cols, whereCases, opts) => {
 							try {
-								var defaults = { schema: "public", opArray: null }
-								var options; if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+								var options = processOptions({
+									schema: "public",
+									opArray: null,
+								}, opts)
 								//object keys will become columns, object values will be written to those columns
 								//make sure <object> is an actual object
 								var valueSet = await processCases(whereCases, options.opArray)
@@ -197,14 +183,10 @@ module.exports = {
 					this.update = {
 						recordWhere: async (values, whereCases, opts) => {
 								try {
-									var defaults = {
+									var options = processOptions({
 										schema: "public",
-										opArray: null
-									}
-									var options
-									if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-				
-									var fName = "db.update";
+										opArray: null,
+									}, opts)
 									//object keys will become columns, object values will be written to those columns
 									//make sure <object> is an actual object
 									if (typeof(options.table) == "string") {
@@ -228,23 +210,21 @@ module.exports = {
 												
 											}
 										} else {
-											reject(`[ERR: ${fName}] Second argument must be of type 'object', got '${typeof(values)}'.`)
+											throw `First argument must be of type 'object', got '${typeof(values)}'.`
 										}
 									} else {
-										reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`)
+										throw `options.table must be of type 'string', got '${typeof(options.table)}'.`
 									}
 								} catch (err) {
-									reject(err)
+									throw err
 								}
 						},
 						incDecAll: async (inc, column, opts) => {
 							try {
-								var defaults = {
+								var options = processOptions({
 									schema: "public",
 									opArray: null,
-								}
-								var options
-								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+								}, opts)
 								//object keys will become columns, object values will be written to those columns
 								//make sure <object> is an actual object
 								var query = `UPDATE ${options.schema}.${options.table} SET ${column} = ${column} + ${inc};`
@@ -258,14 +238,10 @@ module.exports = {
 						},
 						incDecWhere: async (inc, column, cases, opts) => {
 								try {
-									var defaults = {
+									var options = processOptions({
 										schema: "public",
 										opArray: null,
-									}
-									var options
-									if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-				
-									var fName = "db.increment";
+									}, opts)
 									//object keys will become columns, object values will be written to those columns
 									//make sure <object> is an actual object
 									var valueSet = await processCases(cases, options.opArray)
@@ -283,7 +259,9 @@ module.exports = {
 					this.delete = {
 						schema: async (opts) => {
 							var defaults = { overwrite: false }
-							var options; if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+							var options = processOptions({
+								overwrite: false,
+							}, opts)
 
 							var query = ``;
 							if (options.overwrite) {
@@ -296,11 +274,9 @@ module.exports = {
 							return processResponse(queryRes)
 						},
 						table: async (opts) => {
-							var defaults = {
+							var options = processOptions({
 								schema: "public",
-							}
-							var options
-							if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+							}, opts)
 							//CREATE SCHEMA IF NOT EXISTS schema_adrauth
 							var query = `DROP TABLE "${options.schema}".${options.name};`;
 							log(query)
@@ -309,12 +285,10 @@ module.exports = {
 						},
 						record: async (whereCases, opts) => {
 							try {
-								var defaults = {
+								var options = processOptions({
 									schema: "public",
 									opArray: null
-								}
-								var options
-								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+								}, opts)
 								//object keys will become columns, object values will be written to those columns
 								//make sure <object> is an actual object
 								if (typeof(whereCases) == "object" && !Array.isArray(whereCases)) {
@@ -326,24 +300,22 @@ module.exports = {
 										return processResponse(queryRes)
 			
 									} else {
-										reject(`[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`)
+										throw `[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`
 									}
 								} else {
-									reject(`[ERR: ${fName}] Second argument must be of type 'object', got '${typeof(whereCases)}'.`)
+									throw `[ERR: ${fName}] Second argument must be of type 'object', got '${typeof(whereCases)}'.`
 								}
 							} catch (err) {
-								reject(err)
+								throw err
 							}
 						},
 					}
 
 					this.list = {
 						tables: async (opts) => {
-							var defaults = {
-								schema: "public"
-							}
-							var options
-							if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+							var options = processOptions({
+								schema: "public",
+							}, opts)
 							//SELECT * FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';
 							var query = ""
 							if (options.schema) {
@@ -354,7 +326,6 @@ module.exports = {
 								query = `SELECT * FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';`
 							}
 							var queryRes = await dbQuery(this.pool, query)
-							log(queryRes)
 							return processResponse(queryRes)
 						},
 						schemas: async (opts) => {
@@ -365,7 +336,6 @@ module.exports = {
 							//SELECT schema_name FROM information_schema.schemata;
 							var query = `SELECT schema_name FROM information_schema.schemata;`
 							var queryRes = await dbQuery(this.pool, query)
-							log(queryRes)
 							return processResponse(queryRes)
 						},
 					}
@@ -373,11 +343,9 @@ module.exports = {
 					this.count = {
 						tables: async (opts) => {
 							try {
-								var defaults = {
+								var options = processOptions({
 									schema: "public",
-								}
-								var options
-								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+								}, opts)
 								//object keys will become columns, object values will be written to those columns
 								//make sure <object> is an actual object
 								var query = ""
@@ -390,32 +358,24 @@ module.exports = {
 								}
 
 								var queryRes = await dbQuery(this.pool, query)
-								log(queryRes)
 								return parseFloat(queryRes.rows[0].count)
 							} catch (err) {
 								throw err
 							}
 						},
 						schemas: async (opts) => {
-							var defaults = {
-							}
-							var options
-							if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+							var options = processOptions({
+							}, opts)
 							//SELECT schema_name FROM information_schema.schemata;
 							var query = `SELECT count(schema_name) FROM information_schema.schemata;`
 							var queryRes = await dbQuery(this.pool, query)
-							log(queryRes)
 							return parseFloat(queryRes.rows[0].count)
 						},
 						rowsEstimate: async (opts) => {
 							try {
-								var defaults = {
+								var options = processOptions({
 									schema: "public",
-								}
-								var options
-								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-			
-								var fName = "db.rowCountEstimate";
+								}, opts)
 								//object keys will become columns, object values will be written to those columns
 								//make sure <object> is an actual object
 								if (typeof(options.table) == "string") {
@@ -425,7 +385,7 @@ module.exports = {
 									return queryRes
 									
 								} else {
-									throw `[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`
+									throw `options.table must be of type 'string', got '${typeof(options.table)}'.`
 								}
 							} catch (err) {
 								throw err
@@ -433,13 +393,9 @@ module.exports = {
 						},
 						rows: async (opts) => {
 							try {
-								var defaults = {
+								var options = processOptions({
 									schema: "public",
-								}
-								var options
-								if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-			
-								var fName = "db.rowCount";
+								}, opts)
 								//object keys will become columns, object values will be written to those columns
 								//make sure <object> is an actual object
 								if (typeof(options.table) == "string") {
@@ -449,7 +405,7 @@ module.exports = {
 									return queryRes
 									
 								} else {
-									throw `[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`
+									throw `options.table must be of type 'string', got '${typeof(options.table)}'.`
 								}
 							} catch (err) {
 								throw err
@@ -462,11 +418,9 @@ module.exports = {
 							correctNext: async (opts) => {
 								try {
 									//this function heals numeric primary key sequences when they error irrationally after things like backup-loads
-									var defaults = {
+									var options = processOptions({
 										schema: "public",
-									}
-									var options
-									if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+									}, opts)
 
 									// Step 1) Get the primary key of the requested table
 									var query = `SELECT string_agg(a.attname, ', ') AS pk
@@ -506,17 +460,6 @@ module.exports = {
 			}
 		}
 		disconnect() {
-			/*
-			return new Promise((resolve, reject) => {
-				this.pool.end()
-				.then(() => {
-					//pool has been disconnected
-					resolve()
-				})
-				.catch(err => {
-					reject(err)
-				})
-			})*/
 			this.pool.end()
 			.then(() => {
 				//pool has been disconnected
@@ -839,9 +782,10 @@ function processCols(cols, tableName) {
 	})
 }
 
-function processOptions(opts, defaults) {
-	return { ...defaults, ...opts }
-	
+function processOptions(defaults, opts) {
+	var options
+	if (opts != undefined) { options = { ...defaults, ...opts } } else { options = defaults }
+	return options
 }
 
 function processResponse(queryRes) {
@@ -895,6 +839,6 @@ function dbQuery(pool, query, valArray) {
 
 function log(text) {
     if (globals.consoleLogQueries) {
-        log(text)
+        console.log(text)
     }
 }

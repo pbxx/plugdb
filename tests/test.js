@@ -9,7 +9,7 @@ var db = null
 var testOptions = {
     deleteOnFinish: false,
     deleteOnStart: true,
-    consoleLog: true,
+    consoleLog: false,
 }
 
 describe("Database Connection", () => {
@@ -40,7 +40,7 @@ describe("Delete operations", () => {
 describe("Create-Read-Update operations", () => {
     it("Create a schema", () => {
         //test schema creation
-        return db.actions.create.schema({schema: "alldb_test_schema"})
+        db.actions.create.schema({schema: "alldb_test_schema"})
         .then((resultObject) => {
             
             
@@ -48,6 +48,7 @@ describe("Create-Read-Update operations", () => {
         .catch(err => {
             throw(err)
         })
+
     })
     it("Create a table in the schema", () => {
         //test table creation
@@ -56,7 +57,7 @@ describe("Create-Read-Update operations", () => {
             {name: "title", type: "text"},
             {name: "zip", type: "int"},
         ]
-        return db.actions.create.table({schema: "alldb_test_schema", name: "testTable", cols})
+        return db.actions.create.table({schema: "alldb_test_schema", name: "testtable", cols})
         .then((resultObject) => {
             
             
@@ -65,9 +66,9 @@ describe("Create-Read-Update operations", () => {
             throw(err)
         })
     })
-    it("Create a record into the table", () => {
+    it("Create a record in the table", () => {
         //test database insert
-        return db.actions.create.record({title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.create.record({title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             log(res.rowCount)
@@ -80,7 +81,7 @@ describe("Create-Read-Update operations", () => {
     })
     it("Read all items in the table", () => {
         //test database select all
-        return db.actions.get.all({schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.get.all({schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             assert.isArray( res.rows )
@@ -92,7 +93,7 @@ describe("Create-Read-Update operations", () => {
     })
     it("Read all items within specific columns in a given table", () => {
         //test database select cols
-        return db.actions.get.cols("id, zip", {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.get.cols("id, zip", {schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             assert.isArray( res.rows )
@@ -103,7 +104,7 @@ describe("Create-Read-Update operations", () => {
     })
     it("Read *specific* items within specific columns in a given table", () => {
         //test database select cols
-        return db.actions.get.colsWhere("title, zip", {id: 1}, {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.get.colsWhere("title, zip", {id: 1}, {schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             assert.isArray( res.rows )
@@ -114,7 +115,7 @@ describe("Create-Read-Update operations", () => {
     })
     it("Update a record in a specified table", () => {
         //test database update
-        return db.actions.update.recordWhere({zip: 71346}, {title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.update.recordWhere({zip: 71346}, {title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             log(res.rowCount)
@@ -127,10 +128,10 @@ describe("Create-Read-Update operations", () => {
     })
     it("   'zip' value updated to 71346", () => {
         //test database insert
-        return db.actions.get.colsWhere("zip", {id: 1}, {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.get.colsWhere("zip", {id: 1}, {schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
-            log(res.rows)
+            log(res)
             assert.isArray( res.rows )
             assert.equal(res.rows[0].zip, 71346)
             
@@ -142,7 +143,7 @@ describe("Create-Read-Update operations", () => {
     })
     it("Increment a record in a specified table column", () => {
         //test database update
-        return db.actions.update.incDecWhere(3, "zip", {id: 1}, {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.update.incDecWhere(3, "zip", {id: 1}, {schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             log(res.rowCount)
@@ -155,7 +156,7 @@ describe("Create-Read-Update operations", () => {
     })
     it("   'zip' value incremented to 71349", () => {
         //test database insert
-        return db.actions.get.colsWhere("zip", {id: 1}, {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.get.colsWhere("zip", {id: 1}, {schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             log(res.rows)
@@ -170,7 +171,7 @@ describe("Create-Read-Update operations", () => {
     })
     it("   add another record to test multi increment/decrement", () => {
         //test database insert
-        return db.actions.create.record({title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.create.record({title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             assert.isArray( res.rows )
@@ -182,7 +183,7 @@ describe("Create-Read-Update operations", () => {
     })
     it("Decrement ALL records in a specified table column", () => {
         //test database update
-        return db.actions.update.incDecAll(-16, "zip", {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.update.incDecAll(-16, "zip", {schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             log(res.rowCount)
@@ -195,7 +196,7 @@ describe("Create-Read-Update operations", () => {
     })
     it("   'zip' value should now be 71333 for the first record and 91451 for the second record", () => {
         //check first record
-        return db.actions.get.colsWhere("zip", {id: 1}, {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.get.colsWhere("zip", {id: 1}, {schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             log(res.rows)
@@ -203,7 +204,7 @@ describe("Create-Read-Update operations", () => {
             assert.equal(res.rows[0].zip, 71333)
 
             //now check second record
-            return db.actions.get.colsWhere("zip", {id: 2}, {schema: "alldb_test_schema", table: "testTable"})
+            return db.actions.get.colsWhere("zip", {id: 2}, {schema: "alldb_test_schema", table: "testtable"})
             .then((res) => {
                 assert.typeOf( res, "object" )
                 log(res.rows)
@@ -310,7 +311,7 @@ describe("Count operations", () => {
 describe("Correct issues with next primary key numbers", () => {
     it("   add 1 of 2 records...", () => {
         //test database insert
-        return db.actions.create.record({title: "badRecord", zip: 14228}, {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.create.record({title: "badRecord", zip: 14228}, {schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             log(res.rows)
@@ -323,7 +324,7 @@ describe("Correct issues with next primary key numbers", () => {
     })
     it("   add 2 of 2 records...", () => {
         //test database insert
-        return db.actions.create.record({title: "badRecord", zip: 14228}, {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.create.record({title: "badRecord", zip: 14228}, {schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             assert.isArray( res.rows )
@@ -335,7 +336,7 @@ describe("Correct issues with next primary key numbers", () => {
     })
     it("   delete the records to introduce a primary key gap", () => {
         //test DELETE a record
-        return db.actions.delete.record({title: "badRecord"}, {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.delete.record({title: "badRecord"}, {schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             assert.isArray( res.rows )
@@ -347,7 +348,7 @@ describe("Correct issues with next primary key numbers", () => {
     })
     it("   add a record to visualize key gap", () => {
         //test database insert
-        return db.actions.create.record({title: "fickleRecord", zip: 14228}, {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.create.record({title: "fickleRecord", zip: 14228}, {schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             assert.isArray( res.rows )
@@ -359,7 +360,7 @@ describe("Correct issues with next primary key numbers", () => {
     })
     it("   'id' value is 5, indicating key gap problem", () => {
         //test database insert
-        return db.actions.get.colsWhere("id", {title: "fickleRecord"}, {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.get.colsWhere("id", {title: "fickleRecord"}, {schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             log(res.rows)
@@ -374,7 +375,7 @@ describe("Correct issues with next primary key numbers", () => {
     })
     it("   delete this record so gap can be manually fixed", () => {
         //test database insert
-        return db.actions.delete.record({id: 5}, {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.delete.record({id: 5}, {schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             assert.isArray( res.rows )
@@ -399,7 +400,7 @@ describe("Correct issues with next primary key numbers", () => {
     })
     it("   add another record to visualize key gap fixed", () => {
         //test database insert
-        return db.actions.create.record({title: "fickleRecord", zip: 14228}, {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.create.record({title: "fickleRecord", zip: 14228}, {schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             assert.isArray( res.rows )
@@ -411,7 +412,7 @@ describe("Correct issues with next primary key numbers", () => {
     })
     it("   'id' value is now 3, indicating key gap has been fixed", () => {
         //test database insert
-        return db.actions.get.colsWhere("id", {title: "fickleRecord"}, {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.get.colsWhere("id", {title: "fickleRecord"}, {schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             log(res.rows)
@@ -437,7 +438,7 @@ describe("Delete operations", () => {
 function deleteOperations() {
     it("Delete a record from a specified table", () => {
         //test DELETE a record
-        return db.actions.delete.record({title: "testSem"}, {schema: "alldb_test_schema", table: "testTable"})
+        return db.actions.delete.record({title: "testSem"}, {schema: "alldb_test_schema", table: "testtable"})
         .then((resultObject) => {
             assert.typeOf( resultObject, "object" )
             assert.isArray( resultObject.rows )
@@ -449,7 +450,7 @@ function deleteOperations() {
     })
     it("Delete table", () => {
         //test table deletion
-        return db.actions.delete.table({schema: "alldb_test_schema", name: "testTable"})
+        return db.actions.delete.table({schema: "alldb_test_schema", name: "testtable"})
         .then((resultObject) => {
 
             assert.typeOf( resultObject, "object" )
