@@ -300,10 +300,10 @@ module.exports = {
 										return processResponse(queryRes)
 			
 									} else {
-										throw `[ERR: ${fName}] First argument must be of type 'string', got '${typeof(options.table)}'.`
+										throw `options.table must be of type 'string', got '${typeof(options.table)}'.`
 									}
 								} else {
-									throw `[ERR: ${fName}] Second argument must be of type 'object', got '${typeof(whereCases)}'.`
+									throw `Second argument must be of type 'object', got '${typeof(whereCases)}'.`
 								}
 							} catch (err) {
 								throw err
