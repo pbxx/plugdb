@@ -93,7 +93,7 @@ module.exports = {
 					}
 
 					this.get = {
-						all: async (opts) => {
+						records: async (opts) => {
 							try {
 								var options = processOptions({
 									schema: "public",
@@ -181,7 +181,7 @@ module.exports = {
 					}
 
 					this.update = {
-						recordWhere: async (values, whereCases, opts) => {
+						recordsWhere: async (values, whereCases, opts) => {
 								try {
 									var options = processOptions({
 										schema: "public",

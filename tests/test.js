@@ -115,7 +115,7 @@ describe("Create-Read-Update operations", () => {
     })
     it("Update a record in a specified table", () => {
         //test database update
-        return db.actions.update.recordWhere({zip: 71346}, {title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testtable"})
+        return db.actions.update.recordsWhere({zip: 71346}, {title: "testSem", zip: 91467}, {schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             log(res.rowCount)
@@ -270,9 +270,9 @@ describe("List operations", () => {
 })
 
 describe("Count operations", () => {
-    it("should count all tables", () => {
+    it("should count all schemas", () => {
         //test database insert
-        return db.actions.count.tables()
+        return db.actions.count.schemas()
         .then((count) => {
             log(count)
             assert.typeOf( count, "number" )
@@ -294,9 +294,9 @@ describe("Count operations", () => {
             throw(err)
         })
     })
-    it("should count all schemas", () => {
+    it("should count all tables", () => {
         //test database insert
-        return db.actions.count.schemas()
+        return db.actions.count.tables()
         .then((count) => {
             log(count)
             assert.typeOf( count, "number" )
@@ -306,6 +306,19 @@ describe("Count operations", () => {
             throw(err)
         })
     })
+    it("should count all records in a table (estimate)", () => {
+        //test database insert
+        return db.actions.count.tables()
+        .then((count) => {
+            log(count)
+            assert.typeOf( count, "number" )
+            
+        })
+        .catch(err => {
+            throw(err)
+        })
+    })
+    
 })
 
 describe("Correct issues with next primary key numbers", () => {
