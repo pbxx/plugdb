@@ -81,7 +81,7 @@ describe("Create-Read-Update operations", () => {
     })
     it("Read all items in the table", () => {
         //test database select all
-        return db.actions.get.all({schema: "alldb_test_schema", table: "testtable"})
+        return db.actions.get.records({schema: "alldb_test_schema", table: "testtable"})
         .then((res) => {
             assert.typeOf( res, "object" )
             assert.isArray( res.rows )

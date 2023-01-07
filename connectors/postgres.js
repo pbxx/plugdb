@@ -117,7 +117,7 @@ module.exports = {
 							}
 							
 						},
-						allWhere: async (whereCases, opts) => {
+						recordsWhere: async (whereCases, opts) => {
 							try {
 								var options = processOptions({
 									schema: "public",
