@@ -1,8 +1,8 @@
 {
-  "name": "allDB",
+  "name": "plugDB",
   "version": "0.1.0",
   "description": "A package that queries multiple types of databases with the same code",
-  "main": "allDB.js",
+  "main": "plugDB.js",
   "scripts": {
     "test": "mocha --reporter mocha-appveyor-reporter",
     "test-local": "mocha ./tests/test.js --slow 0"

@@ -312,6 +312,17 @@ module.exports = {
 					}
 
 					this.list = {
+						
+						schemas: async (opts) => {
+							var defaults = {
+							}
+							var options
+							if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
+							//SELECT schema_name FROM information_schema.schemata;
+							var query = `SELECT schema_name FROM information_schema.schemata;`
+							var queryRes = await dbQuery(this.pool, query)
+							return processResponse(queryRes)
+						},
 						tables: async (opts) => {
 							var options = processOptions({
 								schema: "public",
@@ -328,13 +339,12 @@ module.exports = {
 							var queryRes = await dbQuery(this.pool, query)
 							return processResponse(queryRes)
 						},
-						schemas: async (opts) => {
-							var defaults = {
-							}
-							var options
-							if (opts) { options = processOptions(opts, defaults) } else {options = defaults}
-							//SELECT schema_name FROM information_schema.schemata;
-							var query = `SELECT schema_name FROM information_schema.schemata;`
+						columns: async (opts) => {
+							var options = processOptions({
+								schema: "public",
+							}, opts)
+							//SELECT * FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema';
+							var query = `SELECT * FROM information_schema.columns WHERE table_schema = '${options.schema}' AND table_name = '${options.table}';`
 							var queryRes = await dbQuery(this.pool, query)
 							return processResponse(queryRes)
 						},
@@ -789,7 +799,7 @@ function processOptions(defaults, opts) {
 }
 
 function processResponse(queryRes) {
-	return {rows: queryRes.rows, rowCount: queryRes.rowCount}
+	return {rows: queryRes.rows, rowCount: queryRes.rowCount, raw: queryRes}
 }
 
 function dbQuery(pool, query, valArray) {

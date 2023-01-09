@@ -1,7 +1,7 @@
 const assert = require("chai").assert
 var expect = require('chai').expect;
 
-const {AllDB} = require('../allDB.js')
+const {PlugDB} = require('../plugDB.js')
 const fs = require('node:fs');
 
 var db = null
@@ -18,7 +18,7 @@ describe("Database Connection", () => {
         var config = JSON.parse(fs.readFileSync("config/creds.json"))
         assert.typeOf( config, "object" )
 
-        db = new AllDB(config, (err, resp) => {
+        db = new PlugDB(config, (err, resp) => {
             //assert.isUndefined( err )
             //assert.equal( (err == null), true )
             if (err) {
@@ -40,7 +40,7 @@ describe("Delete operations", () => {
 describe("Create-Read-Update operations", () => {
     it("Create a schema", () => {
         //test schema creation
-        db.actions.create.schema({schema: "alldb_test_schema"})
+        return db.actions.create.schema({schema: "alldb_test_schema"})
         .then((resultObject) => {
             
             
@@ -224,6 +224,21 @@ describe("Create-Read-Update operations", () => {
 })
 
 describe("List operations", () => {
+    it("should list all schemas in the selected database", () => {
+        //test database insert
+        //SELECT schema_name FROM information_schema.schemata;
+        return db.actions.list.schemas()
+        .then((resultObject) => {
+            log(resultObject)
+            assert.typeOf( resultObject, "object" )
+            assert.typeOf( resultObject.rowCount, "number" )
+            assert.isArray( resultObject.rows )
+            
+        })
+        .catch(err => {
+            throw(err)
+        })
+    })
     it("should list all tables", () => {
         //test database insert
         return db.actions.list.tables()
@@ -252,10 +267,9 @@ describe("List operations", () => {
             throw(err)
         })
     })
-    it("should list all schemas in the selected database", () => {
+    it("should list columns within a table", () => {
         //test database insert
-        //SELECT schema_name FROM information_schema.schemata;
-        return db.actions.list.schemas()
+        return db.actions.list.columns({schema: "alldb_test_schema", table: "testtable"})
         .then((resultObject) => {
             log(resultObject)
             assert.typeOf( resultObject, "object" )
@@ -502,8 +516,8 @@ describe("Disconnect on finish", () => {
 
 
 
-function log(text) {
-    if (testOptions.consoleLog) {
+function log(text, force) {
+    if (testOptions.consoleLog || force) {
         console.log(text)
     }
 }

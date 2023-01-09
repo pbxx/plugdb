@@ -5,7 +5,7 @@ var globals = {
 };
 
 module.exports = {
-  AllDB: class {
+  PlugDB: class {
     constructor(options, callback) {
       //set default options
       var defaultOptions = {}
