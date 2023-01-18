@@ -42,7 +42,9 @@ describe("Create-Read-Update operations", () => {
         //test schema creation
         return db.actions.create.schema({schema: "alldb_test_schema"})
         .then((resultObject) => {
-            
+            assert.typeOf( resultObject, "object" )
+            log(resultObject.rowCount)
+            assert.isArray( resultObject.rows )
             
         })
         .catch(err => {
@@ -52,14 +54,16 @@ describe("Create-Read-Update operations", () => {
     })
     it("Create a table in the schema", () => {
         //test table creation
-        var cols = [
+        let cols = [
             {name: "id", type: "bigint", allowEmpty: false, autoInc: true, primaryKey: true},
             {name: "title", type: "text"},
             {name: "zip", type: "int"},
         ]
         return db.actions.create.table({schema: "alldb_test_schema", name: "testtable", cols})
         .then((resultObject) => {
-            
+            assert.typeOf( resultObject, "object" )
+            log(resultObject.rowCount)
+            assert.isArray( resultObject.rows )
             
         })
         .catch(err => {
@@ -221,6 +225,7 @@ describe("Create-Read-Update operations", () => {
             throw(err)
         })
     })
+    
 })
 
 describe("List operations", () => {
