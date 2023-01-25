@@ -1,5 +1,5 @@
 {
-  "name": "plugDB",
+  "name": "plugdb",
   "version": "0.1.0",
   "description": "A package that queries multiple types of databases with the same code",
   "main": "plugDB.js",
